@@ -66,6 +66,12 @@
 </main>
 
 <script>
+  function boardToPixels(board) {
+    // 1 board = 10px, clamp between 0 and 39
+    const clamped = Math.max(0, Math.min(39, board));
+    return clamped * 10;
+  }
+
   document.getElementById("boardTravelForm").addEventListener("submit", function(event) {
     event.preventDefault(); // stop page reload
 
@@ -74,14 +80,27 @@
     const breakpoint = Number(document.getElementById("breakpointBoard").value);
     const pocket = Number(document.getElementById("pocketBoard").value);
 
-    // Board travel calculation
-    // (We will refine this later — for now it just shows total boards crossed)
+    // Board travel calculation (simple absolute movement for now)
     const totalBoards = Math.abs(laydown - breakpoint) + Math.abs(breakpoint - pocket);
 
     // Show result
     document.getElementById("boardTravelResult").innerHTML = `
       <p>Your ball traveled approximately <strong>${totalBoards}</strong> boards.</p>
     `;
+
+    // Position lane markers
+    const laydownMarker   = document.getElementById("marker-laydown");
+    const breakpointMarker = document.getElementById("marker-breakpoint");
+    const pocketMarker    = document.getElementById("marker-pocket");
+
+    laydownMarker.style.left    = boardToPixels(laydown) + "px";
+    breakpointMarker.style.left = boardToPixels(breakpoint) + "px";
+    pocketMarker.style.left     = boardToPixels(pocket) + "px";
+
+    // Make them visible
+    laydownMarker.style.display    = "block";
+    breakpointMarker.style.display = "block";
+    pocketMarker.style.display     = "block";
   });
 </script>
 
