@@ -51,5 +51,26 @@
   </div>
 </main>
 
+<script>
+  document.getElementById("boardTravelForm").addEventListener("submit", function(event) {
+    event.preventDefault(); // stop page reload
+
+    // Read inputs
+    const laydown = Number(document.getElementById("laydownBoard").value);
+    const breakpoint = Number(document.getElementById("breakpointBoard").value);
+    const pocket = Number(document.getElementById("pocketBoard").value);
+
+    // Board travel calculation
+    // (We will refine this later — for now it just shows total boards crossed)
+    const totalBoards = Math.abs(laydown - breakpoint) + Math.abs(breakpoint - pocket);
+
+    // Show result
+    document.getElementById("boardTravelResult").innerHTML = `
+      <p>Your ball traveled approximately <strong>${totalBoards}</strong> boards.</p>
+    `;
+  });
+</script>
+
+  
 </body>
 </html>
