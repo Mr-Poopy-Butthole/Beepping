@@ -16,8 +16,40 @@
   </header>
 
   <main class="center">
-    <h2>Board Travel Calculator</h2>
-    <p>This is a placeholder page. Soon this will calculate how many boards your ball travels.</p>
-  </main>
+  <h2>Board Travel Calculator</h2>
+  <p>Enter the boards for each point to estimate how many boards your ball travels.</p>
+
+  <form id="boardTravelForm">
+    <p>
+      <label>
+        Laydown board (at the foul line):<br>
+        <input type="number" id="laydownBoard" required>
+      </label>
+    </p>
+
+    <p>
+      <label>
+        Breakpoint board:<br>
+        <input type="number" id="breakpointBoard" required>
+      </label>
+    </p>
+
+    <p>
+      <label>
+        Pocket board (e.g. 17 for righty):<br>
+        <input type="number" id="pocketBoard" required>
+      </label>
+    </p>
+
+    <p>
+      <button type="submit">Calculate</button>
+    </p>
+  </form>
+
+  <div id="boardTravelResult">
+    <!-- Result will appear here later -->
+  </div>
+</main>
+
 </body>
 </html>
