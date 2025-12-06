@@ -108,8 +108,8 @@ button:hover {
 }
 
 .lane {
-  width: 390px;                 /* 39 boards × 10px (horizontal board scale) */
-  height: 480px;                /* 60 ft × 8px per ft (vertical length scale) */
+  width: 312px;                /* 39 boards × 8px (horizontal board scale) */
+  height: 720px;               /* 60 ft × 12px per ft (vertical length scale) */
   margin: 0 auto;
   background-color: #222;
   border-radius: 6px;
@@ -118,8 +118,8 @@ button:hover {
 
   /*
     Background grid:
-    - Vertical lines every 10px = each board across the width
-    - Horizontal lines every 40px = 5 feet down the lane (since 1 ft = 8px)
+    - Vertical lines every 8px = each board across the width
+    - Horizontal lines every 60px = 5 feet down the lane (since 1 ft = 12px)
   */
   background-image:
     repeating-linear-gradient(
@@ -127,16 +127,17 @@ button:hover {
       rgba(255, 255, 255, 0.12) 0px,
       rgba(255, 255, 255, 0.12) 1px,
       transparent 1px,
-      transparent 10px
+      transparent 8px
     ),
     repeating-linear-gradient(
       to top,
       rgba(255, 255, 255, 0.08) 0px,
       rgba(255, 255, 255, 0.08) 1px,
       transparent 1px,
-      transparent 40px      /* 5 ft × 8px = 40px */
+      transparent 60px      /* 5 ft × 12px = 60px */
     );
 }
+
 
 
 /* Foul line at the bottom of the lane graphic */
