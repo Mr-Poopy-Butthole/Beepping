@@ -52,19 +52,43 @@
 
   <!-- Static lane graphic (39 boards wide) -->
 <div class="lane-wrapper">
-    <div class="lane">
-      <div class="foul-line"></div>
-      <div class="headpin-line"></div>
+  <div class="lane">
+    <div class="foul-line"></div>
+    <div class="headpin-line"></div>
 
-      <!-- Markers for laydown, breakpoint, and pocket -->
-      <div id="marker-laydown"   class="lane-marker marker-laydown"></div>
-      <div id="marker-breakpoint" class="lane-marker marker-breakpoint"></div>
-      <div id="marker-pocket"    class="lane-marker marker-pocket"></div>
+    <!-- Distance lines at 15, 30, 45 ft -->
+    <div class="distance-line line-15">15 ft</div>
+    <div class="distance-line line-30">30 ft</div>
+    <div class="distance-line line-45">45 ft</div>
+
+    <!-- Pin deck and pins 1–10 -->
+    <div class="pin-deck">
+      <div class="pin pin-7">7</div>
+      <div class="pin pin-8">8</div>
+      <div class="pin pin-9">9</div>
+      <div class="pin pin-10">10</div>
+
+      <div class="pin pin-4">4</div>
+      <div class="pin pin-5">5</div>
+      <div class="pin pin-6">6</div>
+
+      <div class="pin pin-2">2</div>
+      <div class="pin pin-3">3</div>
+
+      <div class="pin pin-1">1</div>
     </div>
-   <p class="lane-label">
-  Top-down lane view — 39 boards wide (1 board = 8px), 60 feet long (1 ft = 12px)
-</p>
+
+    <!-- Markers for laydown, breakpoint, and pocket -->
+    <div id="marker-laydown"    class="lane-marker marker-laydown"></div>
+    <div id="marker-breakpoint" class="lane-marker marker-breakpoint"></div>
+    <div id="marker-pocket"     class="lane-marker marker-pocket"></div>
   </div>
+
+  <p class="lane-label">
+    Top-down lane view — 39 boards wide (1 board = 8px), 60 feet long (1 ft = 12px)
+  </p>
+</div>
+
 </main>
 
 <script>
