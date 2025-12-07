@@ -115,6 +115,67 @@
     Standard house shot &bull; Example ball: Medium–strong symmetric &bull; Right-handed bowler
   </p>
 
+  <!-- USBC-style SVG lane (static for now) -->
+  <svg
+    id="usbc-lane"
+    viewBox="0 0 3200 400"
+    style="max-width: 100%; height: auto; margin: 40px auto; display: block;"
+  >
+    <!-- Background -->
+    <rect x="0" y="0" width="3200" height="400" fill="#3b2512" />
+
+    <!-- Gutters -->
+    <rect x="0"   y="60" width="3200" height="80"  fill="#181818" />
+    <rect x="0"   y="260" width="3200" height="80" fill="#181818" />
+
+    <!-- Lane surface -->
+    <rect
+      id="lane-surface"
+      x="0"
+      y="80"
+      width="3200"
+      height="240"
+      fill="#6b3f1f"
+    />
+
+    <!-- Foul line -->
+    <rect x="40" y="80" width="10" height="240" fill="#f5f5f5" />
+
+    <!-- Pin deck -->
+    <rect
+      id="pin-deck"
+      x="3000"
+      y="80"
+      width="160"
+      height="240"
+      fill="#7b4a25"
+    />
+
+    <!-- Arrows at ~15 ft (just indicative for now) -->
+    <g id="arrows" transform="translate(720 0)">
+      <polygon points="700,190 710,210 690,210" fill="#f0d9b5" />
+      <polygon points="650,190 660,210 640,210" fill="#f0d9b5" />
+      <polygon points="750,190 760,210 740,210" fill="#f0d9b5" />
+    </g>
+
+    <!-- Pin spots -->
+    <g id="pin-spots" transform="translate(3080, 200)">
+      <circle cx="0" cy="0" r="10" fill="#f5f5f5" />
+      <circle cx="-35" cy="-35" r="10" fill="#f5f5f5" />
+      <circle cx="35"  cy="-35" r="10" fill="#f5f5f5" />
+
+      <circle cx="-70" cy="-70" r="10" fill="#f5f5f5" />
+      <circle cx="0"   cy="-70" r="10" fill="#f5f5f5" />
+      <circle cx="70"  cy="-70" r="10" fill="#f5f5f5" />
+
+      <circle cx="-105" cy="-105" r="10" fill="#f5f5f5" />
+      <circle cx="-35"  cy="-105" r="10" fill="#f5f5f5" />
+      <circle cx="35"   cy="-105" r="10" fill="#f5f5f5" />
+      <circle cx="105"  cy="-105" r="10" fill="#f5f5f5" />
+    </g>
+  </svg>
+
+  <!-- Existing canvas-based demo (still working) -->
   <div class="lane-wrapper">
     <canvas id="laneCanvas" width="640" height="220"></canvas>
     <div class="legend">
@@ -282,7 +343,6 @@
 
     function drawPins() {
       // Approximate headpin position:
-      // 60 ft from foul line, near center of lane (board ~20)
       const headpinFeet = 60;
       const headpinBoard = 19.5;
 
@@ -324,32 +384,31 @@
     }
 
     // Mock ball path segmented into skid / hook / roll.
-    // Coordinates in (feet, board).
     const skidPath = [
-      { ft: 0,  board: 12 },  // foul line
+      { ft: 0,  board: 12 },
       { ft: 5,  board: 12 },
       { ft: 10, board: 11.8 },
       { ft: 15, board: 11.5 },
       { ft: 20, board: 11.2 },
       { ft: 25, board: 10.8 },
-      { ft: 30, board: 10.2 }, // end of skid
-      { ft: 32, board: 10 }    // start of visible hook
+      { ft: 30, board: 10.2 },
+      { ft: 32, board: 10 }
     ];
 
     const hookPath = [
       { ft: 32, board: 10 },
       { ft: 35, board: 10.5 },
       { ft: 38, board: 11.5 },
-      { ft: 41, board: 13 },   // approximate breakpoint
+      { ft: 41, board: 13 },
       { ft: 44, board: 15 },
-      { ft: 48, board: 17 }    // end of hook
+      { ft: 48, board: 17 }
     ];
 
     const rollPath = [
       { ft: 48, board: 17 },
       { ft: 52, board: 17.3 },
       { ft: 56, board: 17.6 },
-      { ft: 60, board: 17.8 }  // enters pocket around 17.5–18
+      { ft: 60, board: 17.8 }
     ];
 
     function drawPathSegment(points, color) {
@@ -369,14 +428,10 @@
     }
 
     function drawBallPath() {
-      // Skid (light blue)
       drawPathSegment(skidPath, '#4fc3f7');
-      // Hook (orange)
       drawPathSegment(hookPath, '#ffb74d');
-      // Roll (green)
       drawPathSegment(rollPath, '#81c784');
 
-      // Draw a small ball at the final position
       const last = rollPath[rollPath.length - 1];
       const x = laneXFromFeet(last.ft);
       const y = laneYFromBoard(last.board);
