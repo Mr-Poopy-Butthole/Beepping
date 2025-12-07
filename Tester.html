@@ -115,7 +115,7 @@
     Standard house shot &bull; Example ball: Medium–strong symmetric &bull; Right-handed bowler
   </p>
 
-  <!-- USBC-style SVG lane (static for now) -->
+   <!-- USBC-style SVG lane (static for now) -->
   <svg
     id="usbc-lane"
     viewBox="0 0 3200 400"
@@ -125,8 +125,8 @@
     <rect x="0" y="0" width="3200" height="400" fill="#3b2512" />
 
     <!-- Gutters -->
-    <rect x="0"   y="60" width="3200" height="80"  fill="#181818" />
-    <rect x="0"   y="260" width="3200" height="80" fill="#181818" />
+    <rect x="0"   y="60"  width="3200" height="80"  fill="#181818" />
+    <rect x="0"   y="260" width="3200" height="80"  fill="#181818" />
 
     <!-- Lane surface -->
     <rect
@@ -141,59 +141,83 @@
     <!-- Foul line -->
     <rect x="40" y="80" width="10" height="240" fill="#f5f5f5" />
 
-    <!-- Pin deck -->
+    <!-- Pin deck (last part of lane) -->
     <rect
       id="pin-deck"
-      x="3000"
+      x="2960"
       y="80"
-      width="160"
+      width="240"
       height="240"
       fill="#7b4a25"
     />
 
-    <!-- Arrows at ~15 ft, on boards 5,10,15,20,25,30,35 -->
-    <!-- Lane usable height = 240 px, representing 39 boards -->
-    <!-- Approx pixels per board ≈ 240 / 39 ≈ 6.15 -->
-    <!-- Top of lane = y=80 -->
-    <g id="arrows">
-      <!-- board 5 -->
-      <polygon points="800,111 780,105 780,117" fill="#f0d9b5" />
-      <!-- board 10 -->
-      <polygon points="800,142 780,136 780,148" fill="#f0d9b5" />
-      <!-- board 15 -->
-      <polygon points="800,173 780,167 780,179" fill="#f0d9b5" />
-      <!-- board 20 -->
-      <polygon points="800,204 780,198 780,210" fill="#f0d9b5" />
-      <!-- board 25 -->
-      <polygon points="800,235 780,229 780,241" fill="#f0d9b5" />
-      <!-- board 30 -->
-      <polygon points="800,266 780,260 780,272" fill="#f0d9b5" />
-      <!-- board 35 -->
-      <polygon points="800,297 780,291 780,303" fill="#f0d9b5" />
+    <!-- Distance markers at 15, 30, 45, 60 feet -->
+    <!-- 60 ft is mapped to x = 3000; foul line at x = 40; lane length = 2960 px -->
+    <g id="distance-markers" font-family="Arial" font-size="18" fill="#f5f5f5">
+      <!-- 15 ft -->
+      <line x1="780" y1="80"  x2="780" y2="320"
+            stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
+      <text x="780" y="70" text-anchor="middle">15 ft</text>
+
+      <!-- 30 ft -->
+      <line x1="1520" y1="80"  x2="1520" y2="320"
+            stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
+      <text x="1520" y="70" text-anchor="middle">30 ft</text>
+
+      <!-- 45 ft -->
+      <line x1="2260" y1="80"  x2="2260" y2="320"
+            stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
+      <text x="2260" y="70" text-anchor="middle">45 ft</text>
+
+      <!-- 60 ft (headpin) -->
+      <line x1="3000" y1="80"  x2="3000" y2="320"
+            stroke="#ffffff" stroke-opacity="0.3" stroke-width="3" />
+      <text x="3000" y="70" text-anchor="middle">60 ft</text>
     </g>
 
-    <!-- Pin spots – rotated 90° clockwise so rows go down-lane, spread across lane -->
-    <!-- Headpin is closest to foul line; back row farthest right -->
-    <g id="pin-spots" transform="translate(2960, 200)">
+    <!-- Arrows at ~15 ft, on boards 5,10,15,20,25,30,35 -->
+    <!-- Lane usable height = 240 px, representing 39 boards (~6.15 px/board) -->
+    <!-- Top of lane surface is y = 80 -->
+    <g id="arrows">
+      <!-- board 5 -->
+      <polygon points="780,111 760,105 760,117" fill="#f0d9b5" />
+      <!-- board 10 -->
+      <polygon points="780,142 760,136 760,148" fill="#f0d9b5" />
+      <!-- board 15 -->
+      <polygon points="780,173 760,167 760,179" fill="#f0d9b5" />
+      <!-- board 20 -->
+      <polygon points="780,204 760,198 760,210" fill="#f0d9b5" />
+      <!-- board 25 -->
+      <polygon points="780,235 760,229 760,241" fill="#f0d9b5" />
+      <!-- board 30 -->
+      <polygon points="780,266 760,260 760,272" fill="#f0d9b5" />
+      <!-- board 35 -->
+      <polygon points="780,297 760,291 760,303" fill="#f0d9b5" />
+    </g>
+
+    <!-- Pin spots – rows go down-lane (to the right), spread across lane -->
+    <!-- Headpin is closest to foul line; back row farthest right inside the pin deck -->
+    <g id="pin-spots" transform="translate(3000, 200)">
       <!-- Headpin (No.1) -->
       <circle cx="0" cy="0" r="10" fill="#f5f5f5" />
 
       <!-- Second row (2 & 3) -->
-      <circle cx="35" cy="-35" r="10" fill="#f5f5f5" />
-      <circle cx="35" cy="35"  r="10" fill="#f5f5f5" />
+      <circle cx="40" cy="-20" r="10" fill="#f5f5f5" />
+      <circle cx="40" cy="20"  r="10" fill="#f5f5f5" />
 
       <!-- Third row (4,5,6) -->
-      <circle cx="70" cy="-70" r="10" fill="#f5f5f5" />
-      <circle cx="70" cy="0"   r="10" fill="#f5f5f5" />
-      <circle cx="70" cy="70"  r="10" fill="#f5f5f5" />
+      <circle cx="80" cy="-40" r="10" fill="#f5f5f5" />
+      <circle cx="80" cy="0"   r="10" fill="#f5f5f5" />
+      <circle cx="80" cy="40"  r="10" fill="#f5f5f5" />
 
       <!-- Back row (7,8,9,10) -->
-      <circle cx="105" cy="-105" r="10" fill="#f5f5f5" />
-      <circle cx="105" cy="-35"  r="10" fill="#f5f5f5" />
-      <circle cx="105" cy="35"   r="10" fill="#f5f5f5" />
-      <circle cx="105" cy="105"  r="10" fill="#f5f5f5" />
+      <circle cx="120" cy="-60" r="10" fill="#f5f5f5" />
+      <circle cx="120" cy="-20" r="10" fill="#f5f5f5" />
+      <circle cx="120" cy="20"  r="10" fill="#f5f5f5" />
+      <circle cx="120" cy="60"  r="10" fill="#f5f5f5" />
     </g>
   </svg>
+
 
   <!-- Existing canvas-based demo (still working) -->
   <div class="lane-wrapper">
