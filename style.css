@@ -99,7 +99,8 @@ button:hover {
 }
 
 /* Lane diagram */
-/* We use 39 boards × 10px = 390px wide */
+/* We use 39 boards × 8px = 312px wide */
+
 .lane-wrapper {
   margin-top: 2rem;
   text-align: center;
@@ -117,9 +118,9 @@ button:hover {
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
 
   /*
-    Background grid:
-    - Vertical lines every 8px = each board across the width
-    - Horizontal lines every 60px = 5 feet down the lane (since 1 ft = 12px)
+    Background:
+    - Only vertical board lines every 8px
+    - Horizontal lines removed; we'll draw only 15/30/45/60 ft explicitly
   */
   background-image:
     repeating-linear-gradient(
@@ -128,17 +129,8 @@ button:hover {
       rgba(255, 255, 255, 0.12) 1px,
       transparent 1px,
       transparent 8px
-    ),
-    repeating-linear-gradient(
-      to top,
-      rgba(255, 255, 255, 0.08) 0px,
-      rgba(255, 255, 255, 0.08) 1px,
-      transparent 1px,
-      transparent 60px      /* 5 ft × 12px = 60px */
     );
 }
-
-
 
 /* Foul line at the bottom of the lane graphic */
 .foul-line {
@@ -159,6 +151,65 @@ button:hover {
   height: 4px;
   background-color: #555;
 }
+/* Distance lines at 15, 30, 45 ft */
+.distance-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: rgba(255, 255, 255, 0.25);
+  font-size: 0.7rem;
+  color: #ccc;
+  text-align: left;
+  padding-left: 4px;
+  transform: translateY(50%);
+}
+
+/* 1 ft = 12px; distances measured up from the foul line (bottom) */
+.line-15 { bottom: 180px; }  /* 15 ft */
+.line-30 { bottom: 360px; }  /* 30 ft */
+.line-45 { bottom: 540px; }  /* 45 ft */
+
+/* Pin deck at the headpin end */
+.pin-deck {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 90px;
+  display: block;
+}
+
+/* Individual pins */
+.pin {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #fff;
+  color: #fff;
+  font-size: 0.6rem;
+  line-height: 20px;
+  text-align: center;
+  background-color: #333;
+}
+
+/* Approximate triangle layout for pins 1–10 (top-down) */
+.pin-1  { top: 60px; left: 50%; transform: translateX(-50%); }
+
+.pin-2  { top: 40px; left: calc(50% - 12px); transform: translateX(-50%); }
+.pin-3  { top: 40px; left: calc(50% + 12px); transform: translateX(-50%); }
+
+.pin-4  { top: 20px; left: calc(50% - 24px); transform: translateX(-50%); }
+.pin-5  { top: 20px; left: 50%;              transform: translateX(-50%); }
+.pin-6  { top: 20px; left: calc(50% + 24px); transform: translateX(-50%); }
+
+.pin-7  { top: 0px;  left: calc(50% - 36px); transform: translateX(-50%); }
+.pin-8  { top: 0px;  left: calc(50% - 12px); transform: translateX(-50%); }
+.pin-9  { top: 0px;  left: calc(50% + 12px); transform: translateX(-50%); }
+.pin-10 { top: 0px;  left: calc(50% + 36px); transform: translateX(-50%); }
+
+
 
 .lane-label {
   margin-top: 0.5rem;
