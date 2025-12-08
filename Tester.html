@@ -2,156 +2,517 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Bowling Lane – USBC Layout</title>
-  <style>
-    body {
-      background: #111;
-      color: #f5f5f5;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    h1 {
-      margin-bottom: 0.25rem;
-    }
-
-    p.subtitle {
-      margin-top: 0;
-      margin-bottom: 1.5rem;
-      font-size: 0.9rem;
-      color: #bbb;
-    }
-  </style>
+  <title>Bowling Physics Simulator</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Bowling Lane – Mock USBC Layout</h1>
-  <p class="subtitle">
-    Lane, arrows, distance markers, foul line dots, and pin deck drawn to approximate USBC proportions.
-  </p>
+  <header class="app-header">
+    <h1>Bowling Physics Simulator</h1>
+    <p class="subtitle">
+      Adjust release parameters, lane conditions, and see the simulated ball path.
+    </p>
+  </header>
 
-  <!-- USBC-style SVG lane -->
-  <svg
-    id="usbc-lane"
-    viewBox="0 0 3200 400"
-    style="max-width: 100%; height: auto; margin: 40px auto; display: block;"
-  >
-    <!-- Background -->
-    <rect x="0" y="0" width="3200" height="400" fill="#3b2512" />
+  <main class="layout">
+    <!-- LEFT: CONTROL PANEL -->
+    <section class="panel panel-controls">
+      <h2>Inputs</h2>
 
-    <!-- Gutters -->
-    <rect x="0"   y="60"  width="3200" height="80"  fill="#181818" />
-    <rect x="0"   y="260" width="3200" height="80"  fill="#181818" />
+      <div class="control-group">
+        <h3>Release</h3>
 
-    <!-- Lane surface -->
-    <rect
-      id="lane-surface"
-      x="0"
-      y="80"
-      width="3200"
-      height="240"
-      fill="#6b3f1f"
-    />
+        <label>
+          Starting board at foul line
+          <input id="startBoard" type="number" min="1" max="39" value="20" />
+          <span class="hint">1 = far left, 39 = far right</span>
+        </label>
 
-    <!-- Foul line -->
-    <rect x="40" y="80" width="10" height="240" fill="#f5f5f5" />
+        <label>
+          Launch angle (°)
+          <input id="launchAngle" type="number" step="0.1" value="-3.0" />
+          <span class="hint">Negative = toward right gutter (RH bowler)</span>
+        </label>
 
-    <!-- Pin deck (last part of lane) -->
-    <rect
-      id="pin-deck"
-      x="2960"
-      y="80"
-      width="240"
-      height="240"
-      fill="#7b4a25"
-    />
+        <label>
+          Ball speed at foul line (mph)
+          <input id="speedMph" type="number" step="0.1" value="16.0" />
+        </label>
 
-    <!-- Distance markers at 15, 30, 45, 60 feet -->
-    <g id="distance-markers" font-family="Arial" font-size="16" fill="#f5f5f5">
-      <!-- 15 ft -->
-      <line x1="780" y1="80"  x2="780" y2="320"
-            stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
-      <text x="780" y="70" text-anchor="middle">15 ft</text>
+        <label>
+          Rev rate (RPM)
+          <input id="revRate" type="number" step="10" value="300" />
+        </label>
 
-      <!-- 30 ft -->
-      <line x1="1520" y1="80"  x2="1520" y2="320"
-            stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
-      <text x="1520" y="70" text-anchor="middle">30 ft</text>
+        <label>
+          Axis rotation (°)
+          <input id="axisRotation" type="number" step="1" value="45" />
+          <span class="hint">0 = end-over-end, 90 = full side roll</span>
+        </label>
 
-      <!-- 45 ft -->
-      <line x1="2260" y1="80"  x2="2260" y2="320"
-            stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
-      <text x="2260" y="70" text-anchor="middle">45 ft</text>
+        <label>
+          Axis tilt (°)
+          <input id="axisTilt" type="number" step="1" value="15" />
+          <span class="hint">0 = horizontal axis, 90 = vertical axis</span>
+        </label>
+      </div>
 
-      <!-- 60 ft (headpin) -->
-      <line x1="3000" y1="80"  x2="3000" y2="320"
-            stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" />
-      <text x="3000" y="70" text-anchor="middle">60 ft</text>
-    </g>
+      <div class="control-group">
+        <h3>Lane & Oil</h3>
 
-    <!-- Foul line dots (on boards 5,10,15,20,25,30,35) -->
-    <!-- Top of lane = 80; boards ~6.15 px each -->
-    <g id="foul-line-dots" fill="#f5f5f5">
-      <!-- helper y positions roughly matching arrow boards -->
-      <!-- board 5  -> y ≈ 80 + 5 * 6.15 ≈ 111 -->
-      <circle cx="55" cy="111" r="4" />
-      <!-- board 10 -> y ≈ 142 -->
-      <circle cx="55" cy="142" r="4" />
-      <!-- board 15 -> y ≈ 173 -->
-      <circle cx="55" cy="173" r="4" />
-      <!-- board 20 -> y ≈ 204 -->
-      <circle cx="55" cy="204" r="4" />
-      <!-- board 25 -> y ≈ 235 -->
-      <circle cx="55" cy="235" r="4" />
-      <!-- board 30 -> y ≈ 266 -->
-      <circle cx="55" cy="266" r="4" />
-      <!-- board 35 -> y ≈ 297 -->
-      <circle cx="55" cy="297" r="4" />
-    </g>
+        <label>
+          Oil distance (ft)
+          <input id="oilDistance" type="number" step="1" value="40" />
+        </label>
 
-    <!-- Chevron-style arrows at ~15 ft, boards 5,10,15,20,25,30,35 -->
-    <g id="arrows" stroke="#f0d9b5" stroke-width="3" fill="none" stroke-linecap="round">
-      <!-- Each arrow is a small "V" pointing down-lane -->
-      <!-- board 5 -->
-      <path d="M770 103 L780 111 L770 119" />
-      <!-- board 10 -->
-      <path d="M770 134 L780 142 L770 150" />
-      <!-- board 15 -->
-      <path d="M770 165 L780 173 L770 181" />
-      <!-- board 20 -->
-      <path d="M770 196 L780 204 L770 212" />
-      <!-- board 25 -->
-      <path d="M770 227 L780 235 L770 243" />
-      <!-- board 30 -->
-      <path d="M770 258 L780 266 L770 274" />
-      <!-- board 35 -->
-      <path d="M770 289 L780 297 L770 305" />
-    </g>
+        <label>
+          μ in oil (μ<sub>oil</sub>)
+          <input id="muOil" type="number" step="0.01" value="0.04" />
+        </label>
 
-    <!-- Pin spots – rows go down-lane (to the right), spread across lane -->
-    <!-- Headpin is closest to foul line; back row farthest right inside the pin deck -->
-    <g id="pin-spots" transform="translate(2950, 200)">
-      <!-- Headpin (No.1) -->
-      <circle cx="0" cy="0" r="10" fill="#f5f5f5" />
+        <label>
+          μ in dry (μ<sub>dry</sub>)
+          <input id="muDry" type="number" step="0.01" value="0.20" />
+        </label>
+      </div>
 
-      <!-- Second row (2 & 3) -->
-      <circle cx="30" cy="-20" r="10" fill="#f5f5f5" />
-      <circle cx="30" cy="20"  r="10" fill="#f5f5f5" />
+      <div class="control-group">
+        <h3>Ball</h3>
+        <label>
+          Radius (inches)
+          <input id="ballRadiusIn" type="number" step="0.01" value="4.27" />
+          <span class="hint">Approx. 8.5" diameter ball</span>
+        </label>
+      </div>
 
-      <!-- Third row (4,5,6) -->
-      <circle cx="60" cy="-40" r="10" fill="#f5f5f5" />
-      <circle cx="60" cy="0"   r="10" fill="#f5f5f5" />
-      <circle cx="60" cy="40"  r="10" fill="#f5f5f5" />
+      <button id="simulateBtn" class="primary-btn">Simulate Shot</button>
+    </section>
 
-      <!-- Back row (7,8,9,10) -->
-      <circle cx="90"  cy="-60" r="10" fill="#f5f5f5" />
-      <circle cx="90"  cy="-20" r="10" fill="#f5f5f5" />
-      <circle cx="90"  cy="20"  r="10" fill="#f5f5f5" />
-      <circle cx="90"  cy="60"  r="10" fill="#f5f5f5" />
-    </g>
-  </svg>
+    <!-- RIGHT: LANE + PATH + OUTPUTS -->
+    <section class="panel panel-visual">
+      <div class="canvas-wrapper">
+        <div class="lane-container">
+          <!-- USBC-style SVG lane with foul-line dots -->
+          <svg
+            id="usbc-lane"
+            viewBox="0 0 3200 400"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <!-- Background -->
+            <rect x="0" y="0" width="3200" height="400" fill="#3b2512" />
+
+            <!-- Gutters -->
+            <rect x="0" y="60" width="3200" height="80" fill="#181818" />
+            <rect x="0" y="260" width="3200" height="80" fill="#181818" />
+
+            <!-- Lane surface -->
+            <rect
+              id="lane-surface"
+              x="0"
+              y="80"
+              width="3200"
+              height="240"
+              fill="#6b3f1f"
+            />
+
+            <!-- Foul line -->
+            <rect x="40" y="80" width="10" height="240" fill="#f5f5f5" />
+
+            <!-- Foul line dots (boards 5,10,15,20,25,30,35) -->
+            <!-- Using same vertical positions as arrows, slightly inside the lane from the foul line -->
+            <g id="foul-dots">
+              <!-- board 5 -->
+              <circle cx="60" cy="111" r="6" fill="#f5f5f5" />
+              <!-- board 10 -->
+              <circle cx="60" cy="142" r="6" fill="#f5f5f5" />
+              <!-- board 15 -->
+              <circle cx="60" cy="173" r="6" fill="#f5f5f5" />
+              <!-- board 20 -->
+              <circle cx="60" cy="204" r="6" fill="#f5f5f5" />
+              <!-- board 25 -->
+              <circle cx="60" cy="235" r="6" fill="#f5f5f5" />
+              <!-- board 30 -->
+              <circle cx="60" cy="266" r="6" fill="#f5f5f5" />
+              <!-- board 35 -->
+              <circle cx="60" cy="297" r="6" fill="#f5f5f5" />
+            </g>
+
+            <!-- Pin deck (last part of lane) -->
+            <rect
+              id="pin-deck"
+              x="2960"
+              y="80"
+              width="240"
+              height="240"
+              fill="#7b4a25"
+            />
+
+            <!-- Distance markers at 15, 30, 45, 60 feet -->
+            <!-- 60 ft roughly mapped to x = 3000; foul line at x = 40 -->
+            <g id="distance-markers" font-family="Arial" font-size="16" fill="#f5f5f5">
+              <!-- 15 ft -->
+              <line x1="780" y1="80" x2="780" y2="320"
+                    stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
+              <text x="780" y="70" text-anchor="middle">15 ft</text>
+
+              <!-- 30 ft -->
+              <line x1="1520" y1="80" x2="1520" y2="320"
+                    stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
+              <text x="1520" y="70" text-anchor="middle">30 ft</text>
+
+              <!-- 45 ft -->
+              <line x1="2260" y1="80" x2="2260" y2="320"
+                    stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
+              <text x="2260" y="70" text-anchor="middle">45 ft</text>
+
+              <!-- 60 ft (headpin) -->
+              <line x1="3000" y1="80" x2="3000" y2="320"
+                    stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" />
+              <text x="3000" y="70" text-anchor="middle">60 ft</text>
+            </g>
+
+            <!-- Arrows at ~15 ft, on boards 5,10,15,20,25,30,35 -->
+            <!-- Lane usable height = 240 px, representing 39 boards (~6.15 px/board) -->
+            <!-- Top of lane surface is y = 80 -->
+            <g id="arrows">
+              <!-- board 5 -->
+              <polygon points="780,111 760,105 760,117" fill="#f0d9b5" />
+              <!-- board 10 -->
+              <polygon points="780,142 760,136 760,148" fill="#f0d9b5" />
+              <!-- board 15 -->
+              <polygon points="780,173 760,167 760,179" fill="#f0d9b5" />
+              <!-- board 20 -->
+              <polygon points="780,204 760,198 760,210" fill="#f0d9b5" />
+              <!-- board 25 -->
+              <polygon points="780,235 760,229 760,241" fill="#f0d9b5" />
+              <!-- board 30 -->
+              <polygon points="780,266 760,260 760,272" fill="#f0d9b5" />
+              <!-- board 35 -->
+              <polygon points="780,297 760,291 760,303" fill="#f0d9b5" />
+            </g>
+
+            <!-- Pin spots -->
+            <g id="pin-spots" transform="translate(2950, 200)">
+              <!-- Headpin (No.1) -->
+              <circle cx="0" cy="0" r="10" fill="#f5f5f5" />
+
+              <!-- Second row (2 & 3) -->
+              <circle cx="30" cy="-20" r="10" fill="#f5f5f5" />
+              <circle cx="30" cy="20" r="10" fill="#f5f5f5" />
+
+              <!-- Third row (4,5,6) -->
+              <circle cx="60" cy="-40" r="10" fill="#f5f5f5" />
+              <circle cx="60" cy="0" r="10" fill="#f5f5f5" />
+              <circle cx="60" cy="40" r="10" fill="#f5f5f5" />
+
+              <!-- Back row (7,8,9,10) -->
+              <circle cx="90" cy="-60" r="10" fill="#f5f5f5" />
+              <circle cx="90" cy="-20" r="10" fill="#f5f5f5" />
+              <circle cx="90" cy="20" r="10" fill="#f5f5f5" />
+              <circle cx="90" cy="60" r="10" fill="#f5f5f5" />
+            </g>
+          </svg>
+
+          <!-- Canvas overlay for ball path; same coordinate space as SVG (3200x400) -->
+          <canvas id="pathCanvas" width="3200" height="400"></canvas>
+        </div>
+      </div>
+
+      <div class="output">
+        <h2>Outputs</h2>
+        <div class="output-grid">
+          <div>
+            <span class="label">Entry board @ 60 ft:</span>
+            <span id="entryBoard" class="value">–</span>
+          </div>
+          <div>
+            <span class="label">Entry angle (°):</span>
+            <span id="entryAngleOut" class="value">–</span>
+          </div>
+          <div>
+            <span class="label">Impact speed (mph):</span>
+            <span id="impactSpeedOut" class="value">–</span>
+          </div>
+        </div>
+        <p class="hint small">
+          These are physics outputs only. We can later connect them to a strike-probability model.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const canvas = document.getElementById("pathCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // DOM references
+      const startBoardInput   = document.getElementById("startBoard");
+      const launchAngleInput  = document.getElementById("launchAngle");
+      const speedMphInput     = document.getElementById("speedMph");
+      const revRateInput      = document.getElementById("revRate");
+      const axisRotationInput = document.getElementById("axisRotation");
+      const axisTiltInput     = document.getElementById("axisTilt");
+      const oilDistanceInput  = document.getElementById("oilDistance");
+      const muOilInput        = document.getElementById("muOil");
+      const muDryInput        = document.getElementById("muDry");
+      const ballRadiusInInput = document.getElementById("ballRadiusIn");
+
+      const simulateBtn       = document.getElementById("simulateBtn");
+
+      const entryBoardOut     = document.getElementById("entryBoard");
+      const entryAngleOut     = document.getElementById("entryAngleOut");
+      const impactSpeedOut    = document.getElementById("impactSpeedOut");
+
+      // Constants / geometry
+      const LANE_LENGTH_FT = 60;   // down-lane
+      const NUM_BOARDS     = 39;
+      const BOARD_WIDTH_IN = 1.067; // standard board width
+      const LANE_WIDTH_IN  = BOARD_WIDTH_IN * NUM_BOARDS;
+      const G_FTPS2        = 32.174; // gravity in ft/s^2
+
+      // SVG-based mapping constants
+      const FOUL_X_PX      = 40;   // foul line x in SVG
+      const HEADPIN_X_PX   = 3000; // 60 ft line in SVG
+      const LANE_TOP_Y_PX  = 80;
+      const LANE_HEIGHT_PX = 240;
+
+      // Convert helpers
+      function mphToFps(mph) {
+        return mph * 1.4666667;
+      }
+
+      function fpsToMph(fps) {
+        return fps / 1.4666667;
+      }
+
+      function degToRad(deg) {
+        return (deg * Math.PI) / 180;
+      }
+
+      // board <-> x_inch (center-based)
+      function boardToXInches(board) {
+        const zeroCentered = board - (NUM_BOARDS + 1) / 2; // board 20 ≈ 0
+        return zeroCentered * BOARD_WIDTH_IN;
+      }
+
+      function xInchesToBoard(xInches) {
+        const boardFloat =
+          xInches / BOARD_WIDTH_IN + (NUM_BOARDS + 1) / 2;
+        return boardFloat;
+      }
+
+      // --- DRAW PATH ON TOP OF SVG ---
+
+      function drawPath(ctx, path) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        if (!path || path.length === 0) return;
+
+        ctx.strokeStyle = "#00ff88";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+
+        for (let i = 0; i < path.length; i++) {
+          const p = path[i];
+
+          // Map down-lane distance y_ft -> SVG x coordinate
+          const xPx =
+            FOUL_X_PX +
+            (p.y_ft / LANE_LENGTH_FT) * (HEADPIN_X_PX - FOUL_X_PX);
+
+          // Map cross-lane x_in -> board -> SVG y coordinate
+          const board = xInchesToBoard(p.x_in);
+          const yPx =
+            LANE_TOP_Y_PX +
+            (board * (LANE_HEIGHT_PX / NUM_BOARDS));
+
+          if (i === 0) {
+            ctx.moveTo(xPx, yPx);
+          } else {
+            ctx.lineTo(xPx, yPx);
+          }
+        }
+
+        ctx.stroke();
+
+        // Draw final ball position
+        const last = path[path.length - 1];
+        const lastXPx =
+          FOUL_X_PX +
+          (last.y_ft / LANE_LENGTH_FT) * (HEADPIN_X_PX - FOUL_X_PX);
+        const lastBoard = xInchesToBoard(last.x_in);
+        const lastYPx =
+          LANE_TOP_Y_PX +
+          (lastBoard * (LANE_HEIGHT_PX / NUM_BOARDS));
+
+        ctx.fillStyle = "#00ff88";
+        ctx.beginPath();
+        ctx.arc(lastXPx, lastYPx, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // --- PHYSICS SIMULATION (simplified Ji/Zhao-style) ---
+
+      function simulateShot(params) {
+        const {
+          startBoard,
+          launchAngleDeg,
+          speedMph,
+          revRateRpm,
+          axisRotationDeg,
+          axisTiltDeg,
+          oilDistanceFt,
+          muOil,
+          muDry,
+          ballRadiusIn,
+        } = params;
+
+        const R_ft = ballRadiusIn / 12; // inches -> ft
+        const v0 = mphToFps(speedMph);  // ft/s
+
+        // Launch angle: measured from straight downlane (+y).
+        const angleRad = degToRad(launchAngleDeg);
+        const vx0 = v0 * Math.sin(angleRad); // sideways
+        const vy0 = v0 * Math.cos(angleRad); // downlane
+
+        // Angular speed from rev rate
+        const omegaMag = (2 * Math.PI * revRateRpm) / 60; // rad/s
+
+        // Axis orientation from rotation & tilt
+        const rotRad = degToRad(axisRotationDeg);
+        const tiltRad = degToRad(axisTiltDeg);
+
+        const a_z = Math.sin(tiltRad);
+        const proj = Math.cos(tiltRad);
+
+        const a_x = Math.sin(rotRad) * proj;
+        const a_y = Math.cos(rotRad) * proj;
+
+        const len = Math.sqrt(a_x * a_x + a_y * a_y + a_z * a_z) || 1;
+        const ax = a_x / len;
+        const ay = a_y / len;
+        const az = a_z / len;
+
+        const omega_x0 = omegaMag * ax;
+        const omega_y0 = omegaMag * ay;
+        const omega_z0 = omegaMag * az;
+
+        // Start position: at foul line, chosen board
+        const x0_in = boardToXInches(startBoard);
+        const y0_ft = 0;
+
+        // Simple solid sphere inertia (assume m=1)
+        const I = 0.4 * R_ft * R_ft;
+
+        let x_in = x0_in;
+        let y_ft = y0_ft;
+        let vx = vx0;
+        let vy = vy0;
+        let wx = omega_x0;
+        let wy = omega_y0;
+        let wz = omega_z0;
+
+        const dt = 0.005;
+        const maxTime = 5;
+
+        const path = [];
+        let t = 0;
+
+        while (t < maxTime && y_ft < LANE_LENGTH_FT) {
+          const mu = y_ft < oilDistanceFt ? muOil : muDry;
+
+          let x_ft = x_in / 12;
+
+          // Slip velocity at contact point
+          const vs_x = vx + R_ft * wy;
+          const vs_y = vy - R_ft * wx;
+          const vs = Math.sqrt(vs_x * vs_x + vs_y * vs_y) || 1e-6;
+
+          // Friction acceleration (m=1)
+          const ax_lin = -mu * G_FTPS2 * (vs_x / vs);
+          const ay_lin = -mu * G_FTPS2 * (vs_y / vs);
+
+          // Friction forces (same as accelerations with m=1)
+          const Fx = ax_lin;
+          const Fy = ay_lin;
+
+          // Torques
+          const tau_x = -R_ft * Fy;
+          const tau_y = R_ft * Fx;
+
+          const alpha_x = tau_x / I;
+          const alpha_y = tau_y / I;
+
+          // Integrate
+          vx += ax_lin * dt;
+          vy += ay_lin * dt;
+          wx += alpha_x * dt;
+          wy += alpha_y * dt;
+
+          x_ft += vx * dt;
+          y_ft += vy * dt;
+
+          x_in = x_ft * 12;
+
+          path.push({
+            x_in,
+            y_ft,
+          });
+
+          t += dt;
+
+          const boardNow = xInchesToBoard(x_in);
+          if (boardNow < 1 || boardNow > NUM_BOARDS) break;
+        }
+
+        const last = path[path.length - 1] || { x_in: x0_in, y_ft: y0_ft };
+        const finalSpeed = Math.sqrt(vx * vx + vy * vy);
+        const impactSpeedMph = fpsToMph(finalSpeed);
+
+        const entryBoard = xInchesToBoard(last.x_in);
+        const entryAngleRad = Math.atan2(vx, vy);
+        const entryAngleDeg = (entryAngleRad * 180) / Math.PI;
+
+        return {
+          path,
+          entryBoard,
+          entryAngleDeg,
+          impactSpeedMph,
+        };
+      }
+
+      function runSimulation() {
+        const params = {
+          startBoard:       parseFloat(startBoardInput.value)   || 20,
+          launchAngleDeg:   parseFloat(launchAngleInput.value)  || 0,
+          speedMph:         parseFloat(speedMphInput.value)     || 16,
+          revRateRpm:       parseFloat(revRateInput.value)      || 300,
+          axisRotationDeg:  parseFloat(axisRotationInput.value) || 45,
+          axisTiltDeg:      parseFloat(axisTiltInput.value)     || 15,
+          oilDistanceFt:    parseFloat(oilDistanceInput.value)  || 40,
+          muOil:            parseFloat(muOilInput.value)        || 0.04,
+          muDry:            parseFloat(muDryInput.value)        || 0.2,
+          ballRadiusIn:     parseFloat(ballRadiusInInput.value) || 4.27,
+        };
+
+        const result = simulateShot(params);
+        const { path, entryBoard, entryAngleDeg, impactSpeedMph } = result;
+
+        drawPath(ctx, path);
+
+        if (path.length > 0) {
+          entryBoardOut.textContent = entryBoard.toFixed(1);
+          entryAngleOut.textContent = entryAngleDeg.toFixed(1);
+          impactSpeedOut.textContent = impactSpeedMph.toFixed(1);
+        } else {
+          entryBoardOut.textContent = "–";
+          entryAngleOut.textContent = "–";
+          impactSpeedOut.textContent = "–";
+        }
+      }
+
+      simulateBtn.addEventListener("click", runSimulation);
+    });
+  </script>
 </body>
 </html>
