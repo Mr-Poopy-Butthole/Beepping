@@ -23,29 +23,29 @@
 
         <label>
           Starting board at foul line
-          <input id="startBoard" type="number" min="1" max="39" value="20" />
+          <input id="startBoard" type="number" min="1" max="39" value="17" />
           <span class="hint">1 = bottom (right gutter), 39 = top (left gutter)</span>
         </label>
 
         <label>
           Launch angle (°)
-          <input id="launchAngle" type="number" step="0.1" value="-3.0" />
+          <input id="launchAngle" type="number" step="0.1" value="-1" />
           <span class="hint">Negative = toward right gutter (RH bowler)</span>
         </label>
 
         <label>
           Ball speed at foul line (mph)
-          <input id="speedMph" type="number" step="0.1" value="16.0" />
+          <input id="speedMph" type="number" step="0.1" value="16" />
         </label>
 
         <label>
           Rev rate (RPM)
-          <input id="revRate" type="number" step="10" value="300" />
+          <input id="revRate" type="number" step="10" value="425" />
         </label>
 
         <label>
           Axis rotation (°)
-          <input id="axisRotation" type="number" step="1" value="45" />
+          <input id="axisRotation" type="number" step="1" value="58" />
           <span class="hint">0 = end-over-end, 90 = full side roll</span>
         </label>
 
@@ -118,23 +118,15 @@
             <rect x="40" y="80" width="10" height="240" fill="#f5f5f5" />
 
             <!-- Foul line dots on boards 35,30,25,20,15,10,5 (39 at top, 1 at bottom) -->
+            <!-- y = 80 + (39 - board + 0.5)*(240/39) -->
             <g id="foul-dots">
-              <!-- lane geometry: laneTop = 80, laneHeight = 240, 39 boards -->
-              <!-- y = 80 + (39 - board + 0.5)*(240/39) -->
-              <!-- board 35 -->
-              <circle cx="60" cy="107.7" r="6" fill="#f5f5f5" />
-              <!-- board 30 -->
-              <circle cx="60" cy="138.5" r="6" fill="#f5f5f5" />
-              <!-- board 25 -->
-              <circle cx="60" cy="169.2" r="6" fill="#f5f5f5" />
-              <!-- board 20 -->
-              <circle cx="60" cy="200.0" r="6" fill="#f5f5f5" />
-              <!-- board 15 -->
-              <circle cx="60" cy="230.8" r="6" fill="#f5f5f5" />
-              <!-- board 10 -->
-              <circle cx="60" cy="261.5" r="6" fill="#f5f5f5" />
-              <!-- board 5 -->
-              <circle cx="60" cy="292.3" r="6" fill="#f5f5f5" />
+              <circle cx="60" cy="107.7" r="6" fill="#f5f5f5" /> <!-- 35 -->
+              <circle cx="60" cy="138.5" r="6" fill="#f5f5f5" /> <!-- 30 -->
+              <circle cx="60" cy="169.2" r="6" fill="#f5f5f5" /> <!-- 25 -->
+              <circle cx="60" cy="200.0" r="6" fill="#f5f5f5" /> <!-- 20 -->
+              <circle cx="60" cy="230.8" r="6" fill="#f5f5f5" /> <!-- 15 -->
+              <circle cx="60" cy="261.5" r="6" fill="#f5f5f5" /> <!-- 10 -->
+              <circle cx="60" cy="292.3" r="6" fill="#f5f5f5" /> <!-- 5  -->
             </g>
 
             <!-- Pin deck (last part of lane) -->
@@ -172,7 +164,6 @@
 
             <!-- Staggered arrows for right-handers: 6/9/11/14 ft -->
             <g id="arrows" fill="#f0d9b5">
-              <!-- all y's computed with 39 at top -->
               <!-- 6 ft: boards 35 & 5 -->
               <polygon points="336.0,107.7 306.0,99.7 306.0,115.7" />
               <polygon points="336.0,292.3 306.0,284.3 306.0,300.3" />
@@ -233,7 +224,7 @@
           These are physics outputs only. We can later connect them to a strike-probability model.
         </p>
 
-        <!-- New: Ball axis / pin visual -->
+        <!-- Ball axis visual -->
         <div class="ball-axis">
           <h2>Ball Axis at Release</h2>
           <canvas id="ballAxisCanvas" width="200" height="200"></canvas>
@@ -284,9 +275,8 @@
       const HEADPIN_X_PX   = 3000; // 60 ft line in SVG
       const LANE_TOP_Y_PX  = 80;
       const LANE_HEIGHT_PX = 240;
-      const BOARD_HEIGHT_PX = LANE_HEIGHT_PX / NUM_BOARDS; // vertical size per board
+      const BOARD_HEIGHT_PX = LANE_HEIGHT_PX / NUM_BOARDS; // pixels per board
 
-      // Helpers
       function mphToFps(mph) {
         return mph * 1.4666667;
       }
@@ -307,9 +297,7 @@
       }
 
       function xInchesToBoard(xInches) {
-        const boardFloat =
-          xInches / BOARD_WIDTH_IN + (NUM_BOARDS + 1) / 2;
-        return boardFloat;
+        return xInches / BOARD_WIDTH_IN + (NUM_BOARDS + 1) / 2;
       }
 
       // --- DRAW PATH ON TOP OF SVG ---
@@ -366,9 +354,9 @@
       // --- BALL AXIS / PIN VISUAL ---
 
       function drawBallAxis(axisRotationDeg, axisTiltDeg) {
-        if (!ballAxisCtx) return;
-
         const ctx2 = ballAxisCtx;
+        if (!ctx2) return;
+
         const w = ctx2.canvas.width;
         const h = ctx2.canvas.height;
         ctx2.clearRect(0, 0, w, h);
@@ -401,13 +389,14 @@
         ctx2.fillStyle = "#444";
         ctx2.fill();
 
-        // Compute axis unit vector (same as physics)
+        // Compute axis unit vector (same as physics, with RH sign convention)
         const rotRad = degToRad(axisRotationDeg);
         const tiltRad = degToRad(axisTiltDeg);
 
         const a_z = Math.sin(tiltRad);
         const proj = Math.cos(tiltRad);
-        const a_x = Math.sin(rotRad) * proj;
+        // NOTE: negative sign so positive rotation hooks left for RH bowler
+        const a_x = -Math.sin(rotRad) * proj;
         const a_y = Math.cos(rotRad) * proj;
 
         const len = Math.sqrt(a_x * a_x + a_y * a_y + a_z * a_z) || 1;
@@ -485,8 +474,8 @@
 
         const a_z = Math.sin(tiltRad);
         const proj = Math.cos(tiltRad);
-
-        const a_x = Math.sin(rotRad) * proj;
+        // RH convention: negative sign so positive rotation hooks left
+        const a_x = -Math.sin(rotRad) * proj;
         const a_y = Math.cos(rotRad) * proj;
 
         const len = Math.sqrt(a_x * a_x + a_y * a_y + a_z * a_z) || 1;
@@ -584,11 +573,11 @@
 
       function runSimulation() {
         const params = {
-          startBoard:       parseFloat(startBoardInput.value)   || 20,
+          startBoard:       parseFloat(startBoardInput.value)   || 17,
           launchAngleDeg:   parseFloat(launchAngleInput.value)  || 0,
           speedMph:         parseFloat(speedMphInput.value)     || 16,
-          revRateRpm:       parseFloat(revRateInput.value)      || 300,
-          axisRotationDeg:  parseFloat(axisRotationInput.value) || 45,
+          revRateRpm:       parseFloat(revRateInput.value)      || 425,
+          axisRotationDeg:  parseFloat(axisRotationInput.value) || 58,
           axisTiltDeg:      parseFloat(axisTiltInput.value)     || 15,
           oilDistanceFt:    parseFloat(oilDistanceInput.value)  || 40,
           muOil:            parseFloat(muOilInput.value)        || 0.04,
@@ -615,11 +604,8 @@
 
       simulateBtn.addEventListener("click", runSimulation);
 
-      // Draw initial axis view on load
-      drawBallAxis(
-        parseFloat(axisRotationInput.value) || 45,
-        parseFloat(axisTiltInput.value) || 15
-      );
+      // Run once on load so we see a nice default hook shot
+      runSimulation();
     });
   </script>
 </body>
