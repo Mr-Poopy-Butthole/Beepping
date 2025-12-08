@@ -118,8 +118,9 @@
             <rect x="40" y="80" width="10" height="240" fill="#f5f5f5" />
 
             <!-- Foul line dots on boards 35,30,25,20,15,10,5 (39 at top, 1 at bottom) -->
-            <!-- Using lane geometry: laneTop = 80, laneHeight = 240, 39 boards -->
             <g id="foul-dots">
+              <!-- lane geometry: laneTop = 80, laneHeight = 240, 39 boards -->
+              <!-- y = 80 + (39 - board + 0.5)*(240/39) -->
               <!-- board 35 -->
               <circle cx="60" cy="107.7" r="6" fill="#f5f5f5" />
               <!-- board 30 -->
@@ -147,7 +148,6 @@
             />
 
             <!-- Distance markers at 15, 30, 45, 60 feet -->
-            <!-- 60 ft roughly mapped to x = 3000; foul line at x = 40 -->
             <g id="distance-markers" font-family="Arial" font-size="16" fill="#f5f5f5">
               <!-- 15 ft -->
               <line x1="780" y1="80" x2="780" y2="320"
@@ -170,28 +170,20 @@
               <text x="3000" y="70" text-anchor="middle">60 ft</text>
             </g>
 
-            <!-- Staggered arrows for right-handers
-                 Distances from foul line:
-                 6 ft: boards 35 & 5
-                 9 ft: boards 30 & 10
-                 11 ft: boards 25 & 15
-                 14 ft: board 20
-            -->
+            <!-- Staggered arrows for right-handers: 6/9/11/14 ft -->
             <g id="arrows" fill="#f0d9b5">
-              <!-- board 35 @ 6 ft -->
+              <!-- all y's computed with 39 at top -->
+              <!-- 6 ft: boards 35 & 5 -->
               <polygon points="336.0,107.7 306.0,99.7 306.0,115.7" />
-              <!-- board 30 @ 9 ft -->
-              <polygon points="484.0,138.5 454.0,130.5 454.0,146.5" />
-              <!-- board 25 @ 11 ft -->
-              <polygon points="582.7,169.2 552.7,161.2 552.7,177.2" />
-              <!-- board 20 @ 14 ft -->
-              <polygon points="730.7,200.0 700.7,192.0 700.7,208.0" />
-              <!-- board 15 @ 11 ft -->
-              <polygon points="582.7,230.8 552.7,222.8 552.7,238.8" />
-              <!-- board 10 @ 9 ft -->
-              <polygon points="484.0,261.5 454.0,253.5 454.0,269.5" />
-              <!-- board 5 @ 6 ft -->
               <polygon points="336.0,292.3 306.0,284.3 306.0,300.3" />
+              <!-- 9 ft: boards 30 & 10 -->
+              <polygon points="484.0,138.5 454.0,130.5 454.0,146.5" />
+              <polygon points="484.0,261.5 454.0,253.5 454.0,269.5" />
+              <!-- 11 ft: boards 25 & 15 -->
+              <polygon points="582.7,169.2 552.7,161.2 552.7,177.2" />
+              <polygon points="582.7,230.8 552.7,222.8 552.7,238.8" />
+              <!-- 14 ft: board 20 -->
+              <polygon points="730.7,200.0 700.7,192.0 700.7,208.0" />
             </g>
 
             <!-- Pin spots -->
@@ -240,6 +232,16 @@
         <p class="hint small">
           These are physics outputs only. We can later connect them to a strike-probability model.
         </p>
+
+        <!-- New: Ball axis / pin visual -->
+        <div class="ball-axis">
+          <h2>Ball Axis at Release</h2>
+          <canvas id="ballAxisCanvas" width="200" height="200"></canvas>
+          <p class="hint small">
+            View from behind the ball. Circle = ball, arrow = spin axis,
+            dot = pin direction along that axis.
+          </p>
+        </div>
       </div>
     </section>
   </main>
@@ -248,6 +250,9 @@
     document.addEventListener("DOMContentLoaded", () => {
       const canvas = document.getElementById("pathCanvas");
       const ctx = canvas.getContext("2d");
+
+      const ballAxisCanvas = document.getElementById("ballAxisCanvas");
+      const ballAxisCtx = ballAxisCanvas.getContext("2d");
 
       // DOM references
       const startBoardInput   = document.getElementById("startBoard");
@@ -281,7 +286,7 @@
       const LANE_HEIGHT_PX = 240;
       const BOARD_HEIGHT_PX = LANE_HEIGHT_PX / NUM_BOARDS; // vertical size per board
 
-      // Convert helpers
+      // Helpers
       function mphToFps(mph) {
         return mph * 1.4666667;
       }
@@ -327,9 +332,8 @@
             (p.y_ft / LANE_LENGTH_FT) * (HEADPIN_X_PX - FOUL_X_PX);
 
           // Map cross-lane x_in -> board -> SVG y coordinate
-          const board = xInchesToBoard(p.x_in);  // 1 (bottom/right) .. 39 (top/left)
+          const board = xInchesToBoard(p.x_in);  // 1 bottom/right .. 39 top/left
 
-          // For a right-hander: board 39 at top, 1 at bottom
           const yPx =
             LANE_TOP_Y_PX +
             (NUM_BOARDS - board + 0.5) * BOARD_HEIGHT_PX;
@@ -357,6 +361,95 @@
         ctx.beginPath();
         ctx.arc(lastXPx, lastYPx, 10, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      // --- BALL AXIS / PIN VISUAL ---
+
+      function drawBallAxis(axisRotationDeg, axisTiltDeg) {
+        if (!ballAxisCtx) return;
+
+        const ctx2 = ballAxisCtx;
+        const w = ctx2.canvas.width;
+        const h = ctx2.canvas.height;
+        ctx2.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const cy = h / 2;
+        const radius = Math.min(w, h) * 0.4;
+
+        // Ball circle
+        ctx2.fillStyle = "#111";
+        ctx2.beginPath();
+        ctx2.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx2.fill();
+        ctx2.strokeStyle = "#777";
+        ctx2.lineWidth = 2;
+        ctx2.stroke();
+
+        // Direction of travel arrow (upward = down-lane)
+        ctx2.strokeStyle = "#444";
+        ctx2.lineWidth = 1.5;
+        ctx2.beginPath();
+        ctx2.moveTo(cx, cy + radius + 12);
+        ctx2.lineTo(cx, cy - radius - 12);
+        ctx2.stroke();
+        ctx2.beginPath();
+        ctx2.moveTo(cx, cy - radius - 12);
+        ctx2.lineTo(cx - 5, cy - radius - 2);
+        ctx2.lineTo(cx + 5, cy - radius - 2);
+        ctx2.closePath();
+        ctx2.fillStyle = "#444";
+        ctx2.fill();
+
+        // Compute axis unit vector (same as physics)
+        const rotRad = degToRad(axisRotationDeg);
+        const tiltRad = degToRad(axisTiltDeg);
+
+        const a_z = Math.sin(tiltRad);
+        const proj = Math.cos(tiltRad);
+        const a_x = Math.sin(rotRad) * proj;
+        const a_y = Math.cos(rotRad) * proj;
+
+        const len = Math.sqrt(a_x * a_x + a_y * a_y + a_z * a_z) || 1;
+        const ax = a_x / len;
+        const az = a_z / len;
+
+        // Project to front view (looking from behind the ball): x horizontal, z vertical
+        const scale = radius * 0.9;
+        const sx = ax;
+        const sz = az;
+
+        const ex = cx + sx * scale;
+        const ey = cy - sz * scale;
+
+        // Spin axis line through center
+        ctx2.strokeStyle = "#00ff88";
+        ctx2.lineWidth = 2;
+        ctx2.beginPath();
+        ctx2.moveTo(cx - sx * scale, cy + sz * scale);
+        ctx2.lineTo(ex, ey);
+        ctx2.stroke();
+
+        // Arrowhead
+        ctx2.beginPath();
+        const ahx1 = ex - sx * 8 - sz * 4;
+        const ahy1 = ey + sz * 8 - sx * 4;
+        const ahx2 = ex - sx * 8 + sz * 4;
+        const ahy2 = ey + sz * 8 + sx * 4;
+        ctx2.moveTo(ex, ey);
+        ctx2.lineTo(ahx1, ahy1);
+        ctx2.lineTo(ahx2, ahy2);
+        ctx2.closePath();
+        ctx2.fillStyle = "#00ff88";
+        ctx2.fill();
+
+        // Pin dot: along +axis direction on the surface
+        const pinX = cx + sx * radius;
+        const pinY = cy - sz * radius;
+        ctx2.fillStyle = "#ffd54f";
+        ctx2.beginPath();
+        ctx2.arc(pinX, pinY, 4, 0, Math.PI * 2);
+        ctx2.fill();
       }
 
       // --- PHYSICS SIMULATION (simplified Ji/Zhao-style) ---
@@ -507,6 +600,7 @@
         const { path, entryBoard, entryAngleDeg, impactSpeedMph } = result;
 
         drawPath(ctx, path);
+        drawBallAxis(params.axisRotationDeg, params.axisTiltDeg);
 
         if (path.length > 0) {
           entryBoardOut.textContent = entryBoard.toFixed(1);
@@ -520,6 +614,12 @@
       }
 
       simulateBtn.addEventListener("click", runSimulation);
+
+      // Draw initial axis view on load
+      drawBallAxis(
+        parseFloat(axisRotationInput.value) || 45,
+        parseFloat(axisTiltInput.value) || 15
+      );
     });
   </script>
 </body>
