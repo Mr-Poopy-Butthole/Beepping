@@ -1,4 +1,39 @@
-  <!-- USBC-style SVG lane (static for now) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bowling Lane – USBC Layout</title>
+  <style>
+    body {
+      background: #111;
+      color: #f5f5f5;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin-bottom: 0.25rem;
+    }
+
+    p.subtitle {
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      color: #bbb;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bowling Lane – Mock USBC Layout</h1>
+  <p class="subtitle">
+    Lane, arrows, distance markers, foul line dots, and pin deck drawn to approximate USBC proportions.
+  </p>
+
+  <!-- USBC-style SVG lane -->
   <svg
     id="usbc-lane"
     viewBox="0 0 3200 400"
@@ -35,8 +70,7 @@
     />
 
     <!-- Distance markers at 15, 30, 45, 60 feet -->
-    <!-- 60 ft is mapped to x = 3000; foul line at x = 40; lane length = 2960 px -->
-    <g id="distance-markers" font-family="Arial" font-size="18" fill="#f5f5f5">
+    <g id="distance-markers" font-family="Arial" font-size="16" fill="#f5f5f5">
       <!-- 15 ft -->
       <line x1="780" y1="80"  x2="780" y2="320"
             stroke="#ffffff" stroke-opacity="0.2" stroke-width="2" />
@@ -54,50 +88,70 @@
 
       <!-- 60 ft (headpin) -->
       <line x1="3000" y1="80"  x2="3000" y2="320"
-            stroke="#ffffff" stroke-opacity="0.3" stroke-width="3" />
+            stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" />
       <text x="3000" y="70" text-anchor="middle">60 ft</text>
     </g>
 
-    <!-- Arrows at ~15 ft, on boards 5,10,15,20,25,30,35 -->
-    <!-- Lane usable height = 240 px, representing 39 boards (~6.15 px/board) -->
-    <!-- Top of lane surface is y = 80 -->
-    <g id="arrows">
+    <!-- Foul line dots (on boards 5,10,15,20,25,30,35) -->
+    <!-- Top of lane = 80; boards ~6.15 px each -->
+    <g id="foul-line-dots" fill="#f5f5f5">
+      <!-- helper y positions roughly matching arrow boards -->
+      <!-- board 5  -> y ≈ 80 + 5 * 6.15 ≈ 111 -->
+      <circle cx="55" cy="111" r="4" />
+      <!-- board 10 -> y ≈ 142 -->
+      <circle cx="55" cy="142" r="4" />
+      <!-- board 15 -> y ≈ 173 -->
+      <circle cx="55" cy="173" r="4" />
+      <!-- board 20 -> y ≈ 204 -->
+      <circle cx="55" cy="204" r="4" />
+      <!-- board 25 -> y ≈ 235 -->
+      <circle cx="55" cy="235" r="4" />
+      <!-- board 30 -> y ≈ 266 -->
+      <circle cx="55" cy="266" r="4" />
+      <!-- board 35 -> y ≈ 297 -->
+      <circle cx="55" cy="297" r="4" />
+    </g>
+
+    <!-- Chevron-style arrows at ~15 ft, boards 5,10,15,20,25,30,35 -->
+    <g id="arrows" stroke="#f0d9b5" stroke-width="3" fill="none" stroke-linecap="round">
+      <!-- Each arrow is a small "V" pointing down-lane -->
       <!-- board 5 -->
-      <polygon points="780,111 760,105 760,117" fill="#f0d9b5" />
+      <path d="M770 103 L780 111 L770 119" />
       <!-- board 10 -->
-      <polygon points="780,142 760,136 760,148" fill="#f0d9b5" />
+      <path d="M770 134 L780 142 L770 150" />
       <!-- board 15 -->
-      <polygon points="780,173 760,167 760,179" fill="#f0d9b5" />
+      <path d="M770 165 L780 173 L770 181" />
       <!-- board 20 -->
-      <polygon points="780,204 760,198 760,210" fill="#f0d9b5" />
+      <path d="M770 196 L780 204 L770 212" />
       <!-- board 25 -->
-      <polygon points="780,235 760,229 760,241" fill="#f0d9b5" />
+      <path d="M770 227 L780 235 L770 243" />
       <!-- board 30 -->
-      <polygon points="780,266 760,260 760,272" fill="#f0d9b5" />
+      <path d="M770 258 L780 266 L770 274" />
       <!-- board 35 -->
-      <polygon points="780,297 760,291 760,303" fill="#f0d9b5" />
+      <path d="M770 289 L780 297 L770 305" />
     </g>
 
     <!-- Pin spots – rows go down-lane (to the right), spread across lane -->
     <!-- Headpin is closest to foul line; back row farthest right inside the pin deck -->
-    <g id="pin-spots" transform="translate(3000, 200)">
+    <g id="pin-spots" transform="translate(2950, 200)">
       <!-- Headpin (No.1) -->
       <circle cx="0" cy="0" r="10" fill="#f5f5f5" />
 
       <!-- Second row (2 & 3) -->
-      <circle cx="40" cy="-20" r="10" fill="#f5f5f5" />
-      <circle cx="40" cy="20"  r="10" fill="#f5f5f5" />
+      <circle cx="30" cy="-20" r="10" fill="#f5f5f5" />
+      <circle cx="30" cy="20"  r="10" fill="#f5f5f5" />
 
       <!-- Third row (4,5,6) -->
-      <circle cx="80" cy="-40" r="10" fill="#f5f5f5" />
-      <circle cx="80" cy="0"   r="10" fill="#f5f5f5" />
-      <circle cx="80" cy="40"  r="10" fill="#f5f5f5" />
+      <circle cx="60" cy="-40" r="10" fill="#f5f5f5" />
+      <circle cx="60" cy="0"   r="10" fill="#f5f5f5" />
+      <circle cx="60" cy="40"  r="10" fill="#f5f5f5" />
 
       <!-- Back row (7,8,9,10) -->
-      <circle cx="120" cy="-60" r="10" fill="#f5f5f5" />
-      <circle cx="120" cy="-20" r="10" fill="#f5f5f5" />
-      <circle cx="120" cy="20"  r="10" fill="#f5f5f5" />
-      <circle cx="120" cy="60"  r="10" fill="#f5f5f5" />
+      <circle cx="90"  cy="-60" r="10" fill="#f5f5f5" />
+      <circle cx="90"  cy="-20" r="10" fill="#f5f5f5" />
+      <circle cx="90"  cy="20"  r="10" fill="#f5f5f5" />
+      <circle cx="90"  cy="60"  r="10" fill="#f5f5f5" />
     </g>
   </svg>
-
+</body>
+</html>
