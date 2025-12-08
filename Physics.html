@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bowling Physics Simulator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Bowling Physics Simulator</h1>
+    <p class="subtitle">
+      Adjust release parameters, lane conditions, and see the simulated ball path.
+    </p>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: CONTROL PANEL -->
+    <section class="panel panel-controls">
+      <h2>Inputs</h2>
+
+      <div class="control-group">
+        <h3>Release</h3>
+
+        <label>
+          Starting board at foul line
+          <input id="startBoard" type="number" min="1" max="39" value="20" />
+          <span class="hint">1 = far left, 39 = far right</span>
+        </label>
+
+        <label>
+          Launch angle (°)
+          <input id="launchAngle" type="number" step="0.1" value="-3.0" />
+          <span class="hint">Negative = toward right gutter (RH bowler)</span>
+        </label>
+
+        <label>
+          Ball speed at foul line (mph)
+          <input id="speedMph" type="number" step="0.1" value="16.0" />
+        </label>
+
+        <label>
+          Rev rate (RPM)
+          <input id="revRate" type="number" step="10" value="300" />
+        </label>
+
+        <label>
+          Axis rotation (°)
+          <input id="axisRotation" type="number" step="1" value="45" />
+          <span class="hint">0 = end-over-end, 90 = full side roll</span>
+        </label>
+
+        <label>
+          Axis tilt (°)
+          <input id="axisTilt" type="number" step="1" value="15" />
+          <span class="hint">0 = horizontal axis, 90 = vertical axis</span>
+        </label>
+      </div>
+
+      <div class="control-group">
+        <h3>Lane & Oil</h3>
+
+        <label>
+          Oil distance (ft)
+          <input id="oilDistance" type="number" step="1" value="40" />
+        </label>
+
+        <label>
+          μ in oil (μ<sub>oil</sub>)
+          <input id="muOil" type="number" step="0.01" value="0.04" />
+        </label>
+
+        <label>
+          μ in dry (μ<sub>dry</sub>)
+          <input id="muDry" type="number" step="0.01" value="0.20" />
+        </label>
+      </div>
+
+      <div class="control-group">
+        <h3>Ball</h3>
+        <!-- You can later make this a dropdown for different balls -->
+        <label>
+          Radius (inches)
+          <input id="ballRadiusIn" type="number" step="0.01" value="4.27" />
+          <span class="hint">Approx. 8.5" diameter ball</span>
+        </label>
+      </div>
+
+      <button id="simulateBtn" class="primary-btn">Simulate Shot</button>
+    </section>
+
+    <!-- RIGHT: CANVAS & OUTPUTS -->
+    <section class="panel panel-visual">
+      <div class="canvas-wrapper">
+        <canvas id="laneCanvas" width="420" height="720"></canvas>
+      </div>
+
+      <div class="output">
+        <h2>Outputs</h2>
+        <div class="output-grid">
+          <div>
+            <span class="label">Entry board @ 60 ft:</span>
+            <span id="entryBoard" class="value">–</span>
+          </div>
+          <div>
+            <span class="label">Entry angle (°):</span>
+            <span id="entryAngleOut" class="value">–</span>
+          </div>
+          <div>
+            <span class="label">Impact speed (mph):</span>
+            <span id="impactSpeedOut" class="value">–</span>
+          </div>
+        </div>
+        <p class="hint small">
+          These are physics outputs only. We can later connect them to a strike-probability model.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const canvas = document.getElementById("laneCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // DOM references
+      const startBoardInput   = document.getElementById("startBoard");
+      const launchAngleInput  = document.getElementById("launchAngle");
+      const speedMphInput     = document.getElementById("speedMph");
+      const revRateInput      = document.getElementById("revRate");
+      const axisRotationInput = document.getElementById("axisRotation");
+      const axisTiltInput     = document.getElementById("axisTilt");
+      const oilDistanceInput  = document.getElementById("oilDistance");
+      const muOilInput        = document.getElementById("muOil");
+      const muDryInput        = document.getElementById("muDry");
+      const ballRadiusInInput = document.getElementById("ballRadiusIn");
+
+      const simulateBtn       = document.getElementById("simulateBtn");
+
+      const entryBoardOut     = document.getElementById("entryBoard");
+      const entryAngleOut     = document.getElementById("entryAngleOut");
+      const impactSpeedOut    = document.getElementById("impactSpeedOut");
+
+      // Constants / geometry
+      const LANE_LENGTH_FT = 60;   // down-lane
+      const NUM_BOARDS     = 39;
+      const BOARD_WIDTH_IN = 1.067; // standard board width
+      const LANE_WIDTH_IN  = BOARD_WIDTH_IN * NUM_BOARDS;
+      const G_FTPS2        = 32.174; // gravity in ft/s^2
+
+      // Convert helpers
+      function mphToFps(mph) {
+        return mph * 1.4666667;
+      }
+
+      function fpsToMph(fps) {
+        return fps / 1.4666667;
+      }
+
+      function degToRad(deg) {
+        return (deg * Math.PI) / 180;
+      }
+
+      // Simple mapping: board # -> horizontal coordinate (inches, center-based)
+      function boardToXInches(board) {
+        const zeroCentered = board - (NUM_BOARDS + 1) / 2; // board 20 ≈ 0
+        return zeroCentered * BOARD_WIDTH_IN;
+      }
+
+      function xInchesToBoard(xInches) {
+        const boardFloat = xInches / BOARD_WIDTH_IN + (NUM_BOARDS + 1) / 2;
+        return boardFloat;
+      }
+
+      // --- DRAWING ---
+
+      function drawLaneBase(ctx) {
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        // Background
+        ctx.fillStyle = "#222";
+        ctx.fillRect(0, 0, w, h);
+
+        // Lane surface
+        const laneMargin = 20;
+        const laneWidthPx = w - laneMargin * 2;
+        const laneTop = 20;
+        const laneBottom = h - 20;
+
+        ctx.fillStyle = "#cda676"; // wood-ish
+        ctx.fillRect(laneMargin, laneTop, laneWidthPx, laneBottom - laneTop);
+
+        // Boards
+        ctx.strokeStyle = "rgba(0,0,0,0.25)";
+        ctx.lineWidth = 1;
+        const pxPerBoard = laneWidthPx / NUM_BOARDS;
+        for (let i = 0; i <= NUM_BOARDS; i++) {
+          const x = laneMargin + i * pxPerBoard;
+          ctx.beginPath();
+          ctx.moveTo(x, laneTop);
+          ctx.lineTo(x, laneBottom);
+          ctx.stroke();
+        }
+
+        // Arrows (approx at 15 ft downlane)
+        const arrowsY = laneTop + (laneBottom - laneTop) * (15 / LANE_LENGTH_FT);
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        const arrowBoards = [5, 10, 15, 20, 25, 30, 35];
+        arrowBoards.forEach((b) => {
+          const xIn = boardToXInches(b);
+          const xNorm = (xIn + LANE_WIDTH_IN / 2) / LANE_WIDTH_IN;
+          const xPx = laneMargin + xNorm * laneWidthPx;
+          const size = 6;
+          ctx.beginPath();
+          ctx.moveTo(xPx, arrowsY - size);
+          ctx.lineTo(xPx - size, arrowsY + size);
+          ctx.lineTo(xPx + size, arrowsY + size);
+          ctx.closePath();
+          ctx.fill();
+        });
+
+        // Foul line
+        const foulY = laneTop;
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(laneMargin, foulY);
+        ctx.lineTo(laneMargin + laneWidthPx, foulY);
+        ctx.stroke();
+
+        // Pin deck line at 60 ft
+        const deckY = laneTop + (laneBottom - laneTop);
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(laneMargin, deckY);
+        ctx.lineTo(laneMargin + laneWidthPx, deckY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // NOTE:
+        // Replace / extend this with your existing USBC-accurate
+        // lane and pin deck drawing from test.html if you like.
+      }
+
+      function drawPath(ctx, path) {
+        if (!path || path.length === 0) return;
+
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        const laneMargin = 20;
+        const laneWidthPx = w - laneMargin * 2;
+        const laneTop = 20;
+        const laneBottom = h - 20;
+
+        ctx.strokeStyle = "#00ff88";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+
+        for (let i = 0; i < path.length; i++) {
+          const p = path[i];
+          // p.x_in: inches from lane center, p.y_ft: distance downlane
+
+          const xNorm = (p.x_in + LANE_WIDTH_IN / 2) / LANE_WIDTH_IN;
+          const xPx = laneMargin + xNorm * laneWidthPx;
+
+          const yNorm = p.y_ft / LANE_LENGTH_FT; // 0 at foul, 1 at pins
+          const yPx = laneTop + yNorm * (laneBottom - laneTop);
+
+          if (i === 0) {
+            ctx.moveTo(xPx, yPx);
+          } else {
+            ctx.lineTo(xPx, yPx);
+          }
+        }
+
+        ctx.stroke();
+
+        // Draw final ball position
+        const last = path[path.length - 1];
+        const xNormLast = (last.x_in + LANE_WIDTH_IN / 2) / LANE_WIDTH_IN;
+        const xPxLast = laneMargin + xNormLast * laneWidthPx;
+        const yNormLast = last.y_ft / LANE_LENGTH_FT;
+        const yPxLast = laneTop + yNormLast * (laneBottom - laneTop);
+
+        ctx.fillStyle = "#00ff88";
+        ctx.beginPath();
+        ctx.arc(xPxLast, yPxLast, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // --- PHYSICS SIMULATION (simplified Ji/Zhao-style) ---
+
+      function simulateShot(params) {
+        const {
+          startBoard,
+          launchAngleDeg,
+          speedMph,
+          revRateRpm,
+          axisRotationDeg,
+          axisTiltDeg,
+          oilDistanceFt,
+          muOil,
+          muDry,
+          ballRadiusIn,
+        } = params;
+
+        // Units
+        const R_ft = ballRadiusIn / 12; // convert inches to ft
+        const v0 = mphToFps(speedMph);  // ft/s
+
+        // Launch angle: measured from straight downlane (y axis).
+        const angleRad = degToRad(launchAngleDeg);
+        const vx0 = v0 * Math.sin(angleRad); // sideways
+        const vy0 = v0 * Math.cos(angleRad); // downlane
+
+        // Angular speed magnitude from rev rate
+        const omegaMag = (2 * Math.PI * revRateRpm) / 60; // rad/s
+
+        // Axis orientation from rotation & tilt
+        const rotRad = degToRad(axisRotationDeg);
+        const tiltRad = degToRad(axisTiltDeg);
+
+        // axis tilt: 0 = horizontal, 90 = vertical
+        const a_z = Math.sin(tiltRad);
+        const proj = Math.cos(tiltRad);
+
+        // axis rotation: angle in the lane plane relative to +y (downlane)
+        const a_x = Math.sin(rotRad) * proj;
+        const a_y = Math.cos(rotRad) * proj;
+
+        // normalize just in case
+        const len = Math.sqrt(a_x * a_x + a_y * a_y + a_z * a_z) || 1;
+        const ax = a_x / len;
+        const ay = a_y / len;
+        const az = a_z / len;
+
+        const omega_x0 = omegaMag * ax;
+        const omega_y0 = omegaMag * ay;
+        const omega_z0 = omegaMag * az;
+
+        // Start position: at foul line, chosen board
+        const x0_in = boardToXInches(startBoard);
+        const y0_ft = 0;
+
+        // Simple solid sphere moment of inertia (scaled)
+        const I = 0.4 * R_ft * R_ft; // assume m=1 for simplicity
+
+        let x_in = x0_in;
+        let y_ft = y0_ft;
+        let vx = vx0;
+        let vy = vy0;
+        let wx = omega_x0;
+        let wy = omega_y0;
+        let wz = omega_z0;
+
+        const dt = 0.005; // seconds
+        const maxTime = 5; // seconds safeguard
+
+        const path = [];
+        let t = 0;
+
+        while (t < maxTime && y_ft < LANE_LENGTH_FT) {
+          // Determine friction coefficient based on position
+          const mu = y_ft < oilDistanceFt ? muOil : muDry;
+
+          // Convert x from inches to ft for physics
+          const x_ft = x_in / 12;
+
+          // Slip velocity at contact point
+          // v_s = v + ω × r, with r = (0,0,-R)
+          const vs_x = vx + R_ft * wy;
+          const vs_y = vy - R_ft * wx;
+          const vs = Math.sqrt(vs_x * vs_x + vs_y * vs_y) || 1e-6;
+
+          // Friction acceleration (assume m = 1)
+          const ax = -mu * G_FTPS2 * (vs_x / vs);
+          const ay = -mu * G_FTPS2 * (vs_y / vs);
+
+          // Torques from friction (τ = r × F, r = (0,0,-R))
+          const Fx = -mu * G_FTPS2 * (vs_x / vs); // = ax since m=1
+          const Fy = -mu * G_FTPS2 * (vs_y / vs); // = ay
+
+          const tau_x = -R_ft * Fy; // -R * Fy
+          const tau_y = R_ft * Fx;  //  R * Fx
+
+          const alpha_x = tau_x / I;
+          const alpha_y = tau_y / I;
+
+          // Integrate
+          vx += ax * dt;
+          vy += ay * dt;
+          wx += alpha_x * dt;
+          wy += alpha_y * dt;
+          // wz unchanged in this simplified model
+
+          x_ft += vx * dt;
+          y_ft += vy * dt;
+
+          x_in = x_ft * 12;
+
+          path.push({
+            x_in,
+            y_ft,
+          });
+
+          t += dt;
+
+          // safety: stop if ball falls off lane
+          const boardNow = xInchesToBoard(x_in);
+          if (boardNow < 1 || boardNow > NUM_BOARDS) break;
+        }
+
+        // Final state for outputs
+        const last = path[path.length - 1] || { x_in: x0_in, y_ft: y0_ft };
+        const finalSpeed = Math.sqrt(vx * vx + vy * vy); // ft/s
+        const impactSpeedMph = fpsToMph(finalSpeed);
+
+        const entryBoard = xInchesToBoard(last.x_in);
+        const entryAngleRad = Math.atan2(vx, vy); // angle relative to +y
+        const entryAngleDeg = (entryAngleRad * 180) / Math.PI;
+
+        return {
+          path,
+          entryBoard,
+          entryAngleDeg,
+          impactSpeedMph,
+        };
+      }
+
+      // --- MAIN SIMULATION HOOK ---
+
+      function runSimulation() {
+        const params = {
+          startBoard:       parseFloat(startBoardInput.value)   || 20,
+          launchAngleDeg:   parseFloat(launchAngleInput.value)  || 0,
+          speedMph:         parseFloat(speedMphInput.value)     || 16,
+          revRateRpm:       parseFloat(revRateInput.value)      || 300,
+          axisRotationDeg:  parseFloat(axisRotationInput.value) || 45,
+          axisTiltDeg:      parseFloat(axisTiltInput.value)     || 15,
+          oilDistanceFt:    parseFloat(oilDistanceInput.value)  || 40,
+          muOil:            parseFloat(muOilInput.value)        || 0.04,
+          muDry:            parseFloat(muDryInput.value)        || 0.2,
+          ballRadiusIn:     parseFloat(ballRadiusInInput.value) || 4.27,
+        };
+
+        const result = simulateShot(params);
+        const { path, entryBoard, entryAngleDeg, impactSpeedMph } = result;
+
+        // Draw
+        drawLaneBase(ctx);
+        drawPath(ctx, path);
+
+        // Outputs
+        if (path.length > 0) {
+          entryBoardOut.textContent = entryBoard.toFixed(1);
+          entryAngleOut.textContent = entryAngleDeg.toFixed(1);
+          impactSpeedOut.textContent = impactSpeedMph.toFixed(1);
+        } else {
+          entryBoardOut.textContent = "–";
+          entryAngleOut.textContent = "–";
+          impactSpeedOut.textContent = "–";
+        }
+      }
+
+      simulateBtn.addEventListener("click", runSimulation);
+
+      // Initial draw
+      drawLaneBase(ctx);
+    });
+  </script>
+</body>
+</html>
