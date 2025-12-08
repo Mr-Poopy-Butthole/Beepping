@@ -1,18 +1,20 @@
-/* Global styles for Beepping */
+/* ===========================
+   Global Reset & Base Styles
+   =========================== */
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Global styles for Beepping */
 body {
   background-color: #111;      /* dark background */
   color: #f5f5f5;              /* light text */
   font-family: Arial, sans-serif;
   margin: 0;
-  padding: 20px;
-}
-
-/* Main centered content wrapper */
-.center {
-  max-width: 600px;
-  margin: 20vh auto 0;         /* push content down a bit and center */
-  text-align: center;
+  padding: 0;                  /* moved padding to specific layouts */
 }
 
 /* Headings */
@@ -37,14 +39,25 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Site header and nav */
+/* ===========================
+   Beepping Layout Pieces
+   =========================== */
+
+/* Main centered content wrapper (legacy / other pages) */
+.center {
+  max-width: 600px;
+  margin: 20vh auto 0;         /* push content down a bit and center */
+  text-align: center;
+}
+
+/* Site header and nav (Beepping main) */
 .site-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   max-width: 900px;
   margin: 0 auto;
-  padding: 10px 0 20px;
+  padding: 10px 20px 20px;
 }
 
 .site-title {
@@ -71,7 +84,10 @@ a:hover {
   font-size: 1.05rem;
 }
 
-/* Input styling */
+/* ===========================
+   Generic Inputs & Buttons
+   =========================== */
+
 input[type="number"] {
   width: 100px;
   padding: 6px;
@@ -83,7 +99,7 @@ input[type="number"] {
   text-align: center;
 }
 
-/* Button styling */
+/* Generic button styling */
 button {
   padding: 6px 12px;
   border: none;
@@ -98,9 +114,189 @@ button:hover {
   background-color: #1e88e5;
 }
 
-/* Lane diagram */
-/* We use 39 boards × 8px = 312px wide */
+/* ===========================
+   Bowling Physics App Layout
+   =========================== */
 
+.app-header {
+  text-align: center;
+  padding: 16px 20px 8px;
+  border-bottom: 1px solid #333;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #bbb;
+}
+
+/* Main app layout (controls + visual) */
+.layout {
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.panel {
+  background-color: #1a1a1a;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 0 0 1px #222;
+}
+
+.panel-controls {
+  flex: 0 0 320px;
+}
+
+.panel-visual {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel h2 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1.2rem;
+}
+
+/* Control groups inside the simulator panel */
+.control-group {
+  border-top: 1px solid #333;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.control-group h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #ddd;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+/* Override input width only inside the control panel so other pages stay 100px */
+.panel-controls label input {
+  width: 100%;
+  margin-top: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background-color: #111;
+  color: #f5f5f5;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.panel-controls label input:focus {
+  outline: none;
+  border-color: #00ff88;
+}
+
+.hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.small {
+  font-size: 0.75rem;
+}
+
+/* Simulator primary button */
+.primary-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #00ff88, #00b3ff);
+  color: #000;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  filter: brightness(1.05);
+}
+
+/* ===========================
+   Lane Visual (SVG + Canvas)
+   =========================== */
+
+.canvas-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background-color: #000;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.lane-container {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+}
+
+#usbc-lane {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+#pathCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Outputs under the lane */
+.output h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.output-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.output-grid .label {
+  display: block;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.output-grid .value {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* ===========================
+   Legacy Lane Diagram (DIV-based)
+   – still here in case other pages use it
+   =========================== */
+
+/* We use 39 boards × 8px = 312px wide */
 .lane-wrapper {
   margin-top: 2rem;
   text-align: center;
@@ -151,6 +347,7 @@ button:hover {
   height: 4px;
   background-color: #555;
 }
+
 /* Distance lines at 15, 30, 45 ft */
 .distance-line {
   position: absolute;
@@ -209,21 +406,19 @@ button:hover {
 .pin-9  { top: 0px;  left: calc(50% + 12px); transform: translateX(-50%); }
 .pin-10 { top: 0px;  left: calc(50% + 36px); transform: translateX(-50%); }
 
-
-
 .lane-label {
   margin-top: 0.5rem;
 }
 
-/* Lane markers */
+/* Lane markers (legacy calculator markers) */
 .lane-marker {
   position: absolute;
   bottom: 20px;             /* a bit above the foul line */
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  transform: translateX(-50%);  /* center the circle on its x-position */
-  display: none;             /* hidden until we calculate */
+  transform: translateX(-50%);
+  display: none;            /* hidden until we calculate */
 }
 
 .marker-laydown {
@@ -238,4 +433,17 @@ button:hover {
   background-color: #e53935;  /* red */
 }
 
+/* ===========================
+   Responsive tweaks
+   =========================== */
 
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .panel-controls {
+    flex: none;
+    width: 100%;
+  }
+}
