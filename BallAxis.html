@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ball Axis Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b0b0f;
+      --bg-elevated: #15151c;
+      --accent: #ff8a36;
+      --accent-soft: rgba(255, 138, 54, 0.2);
+      --accent2: #25d8ff;
+      --text: #f5f5f7;
+      --muted: #aaaaaa;
+      --border: #2b2b35;
+      --danger: #ff4d6a;
+      --radius-lg: 14px;
+      --shadow-soft: 0 14px 35px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1b1b28, #050509);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    header {
+      padding: 18px 20px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    header .tagline {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    main {
+      padding: 20px;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel {
+      background: radial-gradient(circle at top left, rgba(255, 138, 54, 0.06), transparent 55%),
+                  var(--bg-elevated);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+      padding: 16px 18px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .panel-header .subtitle {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Controls */
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr);
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 840px) {
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+
+    .slider-label-row span.value {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent2);
+      font-size: 0.9rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent-soft), #262636);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 0 0 4px rgba(255, 138, 54, 0.35);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 0 0 4px rgba(255, 138, 54, 0.35);
+    }
+
+    .preset-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    button.preset {
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    button.preset span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.8;
+    }
+
+    button.preset:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    button.preset:active {
+      transform: translateY(0);
+    }
+
+    .preset-note {
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Diagrams */
+
+    .diagram-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 960px) {
+      .diagram-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .diagram-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .diagram-wrapper {
+      background: radial-gradient(circle at center, #252535, #14141c);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .diagram-text {
+      font-size: 0.9rem;
+      color: var(--muted);
+      min-height: 2.4em;
+    }
+
+    .diagram-text strong {
+      color: var(--accent2);
+      font-weight: 600;
+    }
+
+    .summary-card p {
+      margin: 4px 0;
+      font-size: 0.9rem;
+    }
+
+    .summary-label {
+      color: var(--muted);
+      margin-right: 6px;
+    }
+
+    .bar {
+      font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      letter-spacing: 0.08em;
+    }
+
+    .summary-highlight {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 3px 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent2);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ball Axis Lab</h1>
+    <p class="tagline">Play with tilt, rotation, and rev rate to see how your ball's roll really works.</p>
+  </header>
+
+  <main>
+    <!-- Controls -->
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Global Controls</h2>
+        <p class="subtitle">These sliders update all visuals at once.</p>
+      </div>
+
+      <div class="controls-grid">
+        <div class="slider-group">
+          <div class="slider-row">
+            <div class="slider-label-row">
+              <label for="tiltSlider">Axis Tilt</label>
+              <span class="value" id="tiltValue">12°</span>
+            </div>
+            <input type="range" id="tiltSlider" min="0" max="30" value="12" />
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-label-row">
+              <label for="rotationSlider">Axis Rotation</label>
+              <span class="value" id="rotationValue">45°</span>
+            </div>
+            <input type="range" id="rotationSlider" min="0" max="90" value="45" />
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-label-row">
+              <label for="revSlider">Rev Rate</label>
+              <span class="value" id="revValue">320 RPM</span>
+            </div>
+            <input type="range" id="revSlider" min="150" max="550" value="320" />
+          </div>
+        </div>
+
+        <div>
+          <div class="panel-header" style="margin-top: 4px; padding: 0;">
+            <h2 style="font-size: 0.95rem;">Presets</h2>
+            <p class="subtitle">Try common bowler styles.</p>
+          </div>
+          <div class="preset-group">
+            <button class="preset" data-preset="stroker">
+              <span class="dot"></span>
+              Stroker
+            </button>
+            <button class="preset" data-preset="tweener">
+              <span class="dot"></span>
+              Tweener (Benchmark)
+            </button>
+            <button class="preset" data-preset="cranker">
+              <span class="dot"></span>
+              Cranker / Two-hander
+            </button>
+          </div>
+          <p class="preset-note">
+            Each preset sets tilt, rotation, and rev rate. Adjust the sliders to see how small changes affect the ball’s roll before you plug numbers into the lane simulator.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Diagrams Row 1 -->
+    <section class="diagram-row">
+      <!-- Axis Tilt -->
+      <div class="panel diagram-card">
+        <div class="panel-header">
+          <h2>Axis Tilt</h2>
+          <p class="subtitle">Side view – how “tipped” the spin axis is.</p>
+        </div>
+        <div class="diagram-wrapper">
+          <svg id="tiltSvg" viewBox="0 0 200 200">
+            <defs>
+              <marker id="arrowhead-tilt" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 z" fill="#ff8a36" />
+              </marker>
+            </defs>
+
+            <!-- Ball -->
+            <circle cx="100" cy="100" r="70" fill="#1b1b29" stroke="#3a3a4c" stroke-width="2"></circle>
+
+            <!-- Reference vertical axis -->
+            <line x1="100" y1="30" x2="100" y2="170"
+                  stroke="#3b3b4d" stroke-width="2" stroke-dasharray="4 4"></line>
+            <text x="104" y="40" font-size="9" fill="#777">0° tilt</text>
+
+            <!-- Actual tilted spin axis group -->
+            <g id="tiltAxisGroup" transform="rotate(0 100 100)">
+              <!-- Spin axis line -->
+              <line x1="100" y1="30" x2="100" y2="170"
+                    stroke="#ff8a36" stroke-width="3"></line>
+              <!-- Spin direction arc (small top arc) -->
+              <path id="tiltArc"
+                    d="M80,58 A25,25 0 0 1 120,58"
+                    fill="none"
+                    stroke="#ff8a36"
+                    stroke-width="3"
+                    marker-end="url(#arrowhead-tilt)"></path>
+            </g>
+
+            <!-- Labels -->
+            <text x="100" y="190" text-anchor="middle" font-size="10" fill="#999">
+              More tilt = more skid and faster backend
+            </text>
+          </svg>
+        </div>
+        <p class="diagram-text" id="tiltText"></p>
+      </div>
+
+      <!-- Axis Rotation -->
+      <div class="panel diagram-card">
+        <div class="panel-header">
+          <h2>Axis Rotation</h2>
+          <p class="subtitle">Top view – how sideways the roll is.</p>
+        </div>
+        <div class="diagram-wrapper">
+          <svg id="rotationSvg" viewBox="0 0 200 200">
+            <defs>
+              <marker id="arrowhead-rotation" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 z" fill="#25d8ff" />
+              </marker>
+            </defs>
+
+            <!-- Lane direction arrow -->
+            <line x1="100" y1="10" x2="100" y2="50"
+                  stroke="#55586a" stroke-width="3"
+                  marker-end="url(#arrowhead-rotation)"></line>
+            <text x="100" y="20" text-anchor="middle" font-size="9" fill="#777">
+              Pins
+            </text>
+
+            <!-- Ball -->
+            <circle cx="100" cy="120" r="60" fill="#181824" stroke="#3a3a4c" stroke-width="2"></circle>
+
+            <!-- PAP / reference dot -->
+            <circle cx="100" cy="120" r="4" fill="#25d8ff"></circle>
+
+            <!-- Rotation arrow group -->
+            <g id="rotationArrowGroup" transform="rotate(0 100 120)">
+              <!-- Curved arrow around ball -->
+              <path d="M100,55
+                       A65,65 0 0 1 159,120"
+                    fill="none"
+                    stroke="#25d8ff"
+                    stroke-width="3"
+                    marker-end="url(#arrowhead-rotation)"></path>
+            </g>
+
+            <!-- Label -->
+            <text x="100" y="195" text-anchor="middle" font-size="10" fill="#999">
+              More side rotation = later, sharper motion
+            </text>
+          </svg>
+        </div>
+        <p class="diagram-text" id="rotationText"></p>
+      </div>
+    </section>
+
+    <!-- Energy Vector -->
+    <section class="panel diagram-card">
+      <div class="panel-header">
+        <h2>Energy Vector</h2>
+        <p class="subtitle">How your revs are pointed – forward vs. sideways.</p>
+      </div>
+      <div class="diagram-wrapper">
+        <svg id="energySvg" viewBox="0 0 360 160">
+          <defs>
+            <marker id="arrowhead-energy" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill="#ff8a36" />
+            </marker>
+          </defs>
+
+          <!-- Faint lane background -->
+          <rect x="140" y="10" width="190" height="140"
+                fill="none" stroke="#26263a" stroke-width="1" stroke-dasharray="4 4"></rect>
+          <text x="235" y="22" text-anchor="middle" font-size="9" fill="#777">
+            Direction of travel
+          </text>
+          <line x1="235" y1="26" x2="235" y2="40"
+                stroke="#555" stroke-width="2"
+                marker-end="url(#arrowhead-energy)"></line>
+
+          <!-- Ball -->
+          <circle cx="80" cy="80" r="40"
+                  fill="#191925" stroke="#3a3a4c" stroke-width="2"></circle>
+          <circle cx="80" cy="80" r="3" fill="#ff8a36"></circle>
+          <text x="80" y="132" text-anchor="middle" font-size="9" fill="#777">
+            Ball at release
+          </text>
+
+          <!-- Energy vector -->
+          <line id="energyArrow" x1="80" y1="80" x2="170" y2="40"
+                stroke="#ff8a36" stroke-width="4"
+                marker-end="url(#arrowhead-energy)"></line>
+
+          <!-- Decomposition legend -->
+          <line x1="235" y1="70" x2="235" y2="40"
+                stroke="#25d8ff" stroke-width="3" marker-end="url(#arrowhead-energy)"></line>
+          <text x="245" y="52" font-size="9" fill="#25d8ff">Forward</text>
+
+          <line x1="235" y1="70" x2="275" y2="70"
+                stroke="#ff4d6a" stroke-width="3" marker-end="url(#arrowhead-energy)"></line>
+          <text x="285" y="74" font-size="9" fill="#ff4d6a">Side</text>
+        </svg>
+      </div>
+      <p class="diagram-text" id="energyText"></p>
+
+      <div class="summary-card">
+        <p>
+          <span class="summary-label">Forward roll:</span>
+          <span id="forwardPercent" class="summary-highlight">–</span>
+        </p>
+        <p>
+          <span class="summary-label">Side roll (hook potential):</span>
+          <span id="sidePercent" class="summary-highlight">–</span>
+        </p>
+        <p>
+          <span class="summary-label">Lane length feel:</span>
+          <span id="lengthBar" class="bar"></span>
+        </p>
+        <p>
+          <span class="summary-label">Hook strength feel:</span>
+          <span id="hookBar" class="bar"></span>
+        </p>
+        <div class="chip">
+          <span class="chip-dot"></span>
+          <span id="revProfile">–</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const tiltSlider = document.getElementById('tiltSlider');
+      const rotationSlider = document.getElementById('rotationSlider');
+      const revSlider = document.getElementById('revSlider');
+
+      const tiltValue = document.getElementById('tiltValue');
+      const rotationValue = document.getElementById('rotationValue');
+      const revValue = document.getElementById('revValue');
+
+      const tiltText = document.getElementById('tiltText');
+      const rotationText = document.getElementById('rotationText');
+      const energyText = document.getElementById('energyText');
+
+      const tiltAxisGroup = document.getElementById('tiltAxisGroup');
+      const rotationArrowGroup = document.getElementById('rotationArrowGroup');
+      const energyArrow = document.getElementById('energyArrow');
+
+      const forwardPercentEl = document.getElementById('forwardPercent');
+      const sidePercentEl = document.getElementById('sidePercent');
+      const lengthBarEl = document.getElementById('lengthBar');
+      const hookBarEl = document.getElementById('hookBar');
+      const revProfileEl = document.getElementById('revProfile');
+
+      const presets = document.querySelectorAll('button.preset');
+
+      function clamp(v, min, max) {
+        return Math.min(max, Math.max(min, v));
+      }
+
+      function makeBar(score) {
+        const fullChar = '▰';
+        const emptyChar = '▱';
+        const max = 5;
+        const fullCount = clamp(Math.round(score), 1, max);
+        const emptyCount = max - fullCount;
+        return fullChar.repeat(fullCount) + emptyChar.repeat(emptyCount);
+      }
+
+      function getTiltDescription(tilt) {
+        if (tilt <= 5) {
+          return `<strong>Very low tilt</strong> – the ball wants to roll end-over-end early, using energy sooner and smoothing out the backend.`;
+        } else if (tilt <= 15) {
+          return `<strong>Medium tilt</strong> – a healthy blend of length and traction. Good baseline for many league bowlers.`;
+        } else if (tilt <= 24) {
+          return `<strong>Higher tilt</strong> – the ball skids longer before digging in, saving more energy for the back of the lane.`;
+        } else {
+          return `<strong>Extreme tilt</strong> – lots of skid, very fast backend when it finds friction, but easier to miss the breakpoint in heavy oil.`;
+        }
+      }
+
+      function getRotationDescription(rotation) {
+        if (rotation <= 10) {
+          return `<strong>Almost end-over-end</strong> – very forward roll, earlier hook and a smooth, controllable motion.`;
+        } else if (rotation <= 35) {
+          return `<strong>Forward-biased rotation</strong> – controllable shape with a clear backend move, great for playing up the boards.`;
+        } else if (rotation <= 60) {
+          return `<strong>Modern benchmark rotation</strong> – good side roll for length and pop. This is where many modern releases live.`;
+        } else if (rotation <= 80) {
+          return `<strong>Heavy side roll</strong> – longer skid and a stronger direction change when the ball hits friction.`;
+        } else {
+          return `<strong>Max side roll</strong> – the spin is pointed very sideways. Huge hook potential on friction, but can skid a long way in oil.`;
+        }
+      }
+
+      function getEnergyDescription(tilt, rotation, rev) {
+        const rot = rotation;
+        const revNorm = (rev - 150) / (550 - 150); // 0–1
+
+        if (rev < 230 && rot < 20) {
+          return `Low revs and low rotation – most energy is pointed straight forward. Great for control, but you’ll rely more on the lane pattern and surface than raw hook.`;
+        } else if (rev < 260 && rot >= 20 && rot <= 45) {
+          return `Lower revs with moderate rotation – a playable shape that can still create a noticeable backend when matched to the right ball and surface.`;
+        } else if (revNorm >= 0.3 && revNorm <= 0.7 && rot >= 30 && rot <= 60) {
+          return `Matched revs and rotation – the ball stores energy well and can create a strong but readable motion on most house shots.`;
+        } else if (revNorm > 0.7 && rot > 45) {
+          return `High revs and strong side rotation – a lot of energy is pointed sideways. Expect an explosive move when the ball encounters friction.`;
+        } else if (tilt > 20 && rot > 40) {
+          return `Higher tilt plus side rotation – the ball skids a long way before that stored side-roll energy snaps it toward the pocket.`;
+        } else {
+          return `Your revs, tilt, and rotation are balanced in a way that can be tuned with ball choice and surface to create either a smoother or sharper overall shape.`;
+        }
+      }
+
+      function getRevProfile(rev) {
+        if (rev < 230) return 'Low rev profile – classic stroker feel.';
+        if (rev < 380) return 'Matched rev profile – tweener / benchmark territory.';
+        return 'High rev profile – cranker / two-hander style release.';
+      }
+
+      function updateTiltView(tilt) {
+        // Tilt is measured away from vertical. We'll rotate the axis group by that angle.
+        // Positive angle = lean to the right for a simple visual.
+        const angle = tilt;
+        tiltAxisGroup.setAttribute('transform', `rotate(${angle} 100 100)`);
+
+        // Also adjust stroke width slightly to hint at "stronger" tilt.
+        const baseWidth = 3;
+        const extra = (tilt / 30) * 1.2; // up to +1.2
+        const newWidth = baseWidth + extra;
+        const axisLine = tiltAxisGroup.querySelector('line');
+        const arcPath = tiltAxisGroup.querySelector('path');
+        axisLine.setAttribute('stroke-width', newWidth.toFixed(2));
+        arcPath.setAttribute('stroke-width', newWidth.toFixed(2));
+
+        tiltText.innerHTML = getTiltDescription(tilt);
+      }
+
+      function updateRotationView(rotation) {
+        // Rotation is angle between direction of travel and spin direction.
+        // 0° = mostly forward; 90° = pure side roll.
+        // We'll rotate the arrow group around the ball center (100, 120).
+        const angle = rotation;
+        rotationArrowGroup.setAttribute('transform', `rotate(${angle} 100 120)`);
+
+        rotationText.innerHTML = getRotationDescription(rotation);
+      }
+
+      function updateEnergyView(tilt, rotation, rev) {
+        // Compute an energy vector.
+        // Basic idea: forward component ~ cos(rotation), side component ~ sin(rotation),
+        // then mod with tilt to soften side roll as tilt climbs.
+        const rotRad = rotation * Math.PI / 180;
+
+        let forward = Math.cos(rotRad);
+        let side = Math.sin(rotRad);
+
+        const tiltFactor = tilt / 30; // 0–1
+        side *= (1 - 0.4 * tiltFactor);  // reduce effective side roll as tilt increases slightly
+        forward *= (1 + 0.15 * (1 - tiltFactor)); // slightly favor forward roll at lower tilt
+
+        const absForward = Math.abs(forward);
+        const absSide = Math.abs(side);
+        const sum = absForward + absSide || 1;
+
+        const forwardPct = (absForward / sum) * 100;
+        const sidePct = (absSide / sum) * 100;
+
+        forwardPercentEl.textContent = `${forwardPct.toFixed(0)}%`;
+        sidePercentEl.textContent = `${sidePct.toFixed(0)}%`;
+
+        // Arrow length based on revs, 150–550 -> 60–140 px
+        const minLen = 60;
+        const maxLen = 140;
+        const revNorm = (rev - 150) / (550 - 150); // 0–1
+        const length = minLen + (maxLen - minLen) * revNorm;
+
+        // For drawing angle: 0° rotation -> mostly forward (up), 90° -> side (right).
+        // We'll start arrow pointing straight up (-90° in screen coords) and rotate from there.
+        const angleDeg = -90 + rotation;
+        const angleRad = angleDeg * Math.PI / 180;
+
+        const x1 = 80;
+        const y1 = 80;
+        const x2 = x1 + length * Math.cos(angleRad);
+        const y2 = y1 + length * Math.sin(angleRad);
+
+        energyArrow.setAttribute('x1', x1);
+        energyArrow.setAttribute('y1', y1);
+        energyArrow.setAttribute('x2', x2.toFixed(2));
+        energyArrow.setAttribute('y2', y2.toFixed(2));
+
+        // Summary bars.
+        // Length feel depends mainly on tilt (more tilt = more apparent length).
+        const lengthScore = 1.5 + (tilt / 30) * 3.5;  // 1.5–5
+        // Hook strength depends on rotation + revs.
+        const hookScore = 1 + (rotation / 90) * 2 + revNorm * 2; // 1–5-ish
+        lengthBarEl.textContent = makeBar(lengthScore);
+        hookBarEl.textContent = makeBar(hookScore);
+
+        // Energy narrative + rev profile text.
+        energyText.innerHTML = getEnergyDescription(tilt, rotation, rev);
+        revProfileEl.textContent = getRevProfile(rev);
+      }
+
+      function updateAll() {
+        const tilt = Number(tiltSlider.value);
+        const rotation = Number(rotationSlider.value);
+        const rev = Number(revSlider.value);
+
+        tiltValue.textContent = `${tilt}°`;
+        rotationValue.textContent = `${rotation}°`;
+        revValue.textContent = `${rev} RPM`;
+
+        updateTiltView(tilt);
+        updateRotationView(rotation);
+        updateEnergyView(tilt, rotation, rev);
+      }
+
+      function applyPreset(name) {
+        if (name === 'stroker') {
+          tiltSlider.value = 8;
+          rotationSlider.value = 20;
+          revSlider.value = 220;
+        } else if (name === 'tweener') {
+          tiltSlider.value = 12;
+          rotationSlider.value = 45;
+          revSlider.value = 320;
+        } else if (name === 'cranker') {
+          tiltSlider.value = 18;
+          rotationSlider.value = 60;
+          revSlider.value = 450;
+        }
+        updateAll();
+      }
+
+      // Event listeners
+      tiltSlider.addEventListener('input', updateAll);
+      rotationSlider.addEventListener('input', updateAll);
+      revSlider.addEventListener('input', updateAll);
+
+      presets.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const presetName = btn.getAttribute('data-preset');
+          applyPreset(presetName);
+        });
+      });
+
+      // Initial render
+      updateAll();
+    })();
+  </script>
+</body>
+</html>
