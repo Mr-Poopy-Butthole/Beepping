@@ -6,13 +6,16 @@
   <link rel="stylesheet" href="/style.css">
 
   <style>
-    /* === Lane Ruler === */
+    /* === Lane Ruler + Layout Overrides for this page === */
+
     .lane-wrapper {
       position: relative;
       margin-top: 2rem;
       display: flex;
       justify-content: center;
+      align-items: flex-start;   /* top-align ruler and lane */
       gap: 10px;
+      text-align: left;          /* let lane-label handle its own centering */
     }
 
     .ruler {
@@ -22,11 +25,17 @@
       background: #0d0d0d;
       border: 1px solid #333;
       border-radius: 6px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
+    }
+
+    .tick-major,
+    .tick-minor {
+      position: absolute;
+      left: 4px;
+      transform: translateY(50%);  /* match .distance-line behavior */
     }
 
     .tick-major {
-      position: absolute;
-      left: 4px;
       width: 24px;
       height: 2px;
       background: #ffffffaa;
@@ -37,11 +46,11 @@
       left: 4px;
       color: #bbb;
       font-size: 0.7rem;
+      /* slight offset so text sits just above the tick */
+      transform: translateY(50%);
     }
 
     .tick-minor {
-      position: absolute;
-      left: 4px;
       width: 18px;
       height: 1px;
       background: #888;
@@ -56,11 +65,24 @@
       background: #666;
     }
 
-    /* === Straight Line Path === */
+    /* === Straight Line Path Canvas === */
     #straightCanvas {
       position: absolute;
       inset: 0;
       pointer-events: none;
+    }
+
+    /* Keep the lane label nicely centered under just the lane-container */
+    .lane-container {
+      position: relative;
+      width: 312px;
+    }
+
+    .lane-label {
+      margin-top: 0.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #ccc;
     }
   </style>
 </head>
@@ -76,73 +98,76 @@
 </header>
 
 <main class="center">
-<h2>Straight-Line Aiming Calculator (Right-Handed)</h2>
-<p>
-  Enter your <strong>release board</strong> at the foul line and your 
-  <strong>target board</strong> at the arrows (15 ft).  
-  This tool shows where the ball would go <em>with zero friction / zero hook</em>.
-</p>
-
-<form id="travelForm">
+  <h2>Straight-Line Aiming Calculator (Right-Handed)</h2>
   <p>
-    <label>
-      Release Board (0 = far right gutter, 39 = far left):
-      <input type="number" id="releaseBoard" min="0" max="39" required>
-    </label>
+    Enter your <strong>release board</strong> at the foul line and your
+    <strong>target board</strong> at the arrows (15 ft). This tool shows where the ball
+    would go <em>with zero friction / zero hook</em>.
   </p>
 
-  <p>
-    <label>
-      Arrow Board (at 15 ft):
-      <input type="number" id="arrowBoard" min="0" max="39" required>
-    </label>
-  </p>
+  <form id="travelForm">
+    <p>
+      <label>
+        Release Board (0 = far right gutter, 39 = far left):
+        <input type="number" id="releaseBoard" min="0" max="39" required>
+      </label>
+    </p>
 
-  <p>
-    <button type="submit">Calculate Straight Path</button>
-  </p>
-</form>
+    <p>
+      <label>
+        Arrow Board (at 15 ft):
+        <input type="number" id="arrowBoard" min="0" max="39" required>
+      </label>
+    </p>
 
-<div id="output" class="result-box"></div>
+    <p>
+      <button type="submit">Calculate Straight Path</button>
+    </p>
+  </form>
 
-<div class="lane-wrapper">
+  <div id="output" class="result-box"></div>
 
-  <!-- LEFT SIDE RULER -->
-  <div class="ruler" id="ruler"></div>
+  <div class="lane-wrapper">
 
-  <!-- Lane + Straight Line Canvas -->
-  <div class="lane-container">
-    <canvas id="straightCanvas" width="312" height="720"></canvas>
+    <!-- LEFT SIDE RULER -->
+    <div class="ruler" id="ruler"></div>
 
-    <div class="lane">
-      <div class="foul-line"></div>
-      <div class="headpin-line"></div>
+    <!-- Lane + Straight Line Canvas -->
+    <div class="lane-container">
+      <canvas id="straightCanvas" width="312" height="720"></canvas>
 
-      <div class="distance-line line-15">15 ft</div>
-      <div class="distance-line line-30">30 ft</div>
-      <div class="distance-line line-45">45 ft</div>
+      <div class="lane">
+        <div class="foul-line"></div>
+        <div class="headpin-line"></div>
 
-      <!-- Pin deck (unchanged) -->
-      <div class="pin-deck">
-        <div class="pin pin-7">7</div>
-        <div class="pin pin-8">8</div>
-        <div class="pin pin-9">9</div>
-        <div class="pin pin-10">10</div>
-        <div class="pin pin-4">4</div>
-        <div class="pin pin-5">5</div>
-        <div class="pin pin-6">6</div>
-        <div class="pin pin-2">2</div>
-        <div class="pin pin-3">3</div>
-        <div class="pin pin-1">1</div>
+        <!-- Distance lines at 15, 30, 45 ft -->
+        <div class="distance-line line-15">15 ft</div>
+        <div class="distance-line line-30">30 ft</div>
+        <div class="distance-line line-45">45 ft</div>
+
+        <!-- Pin deck and pins 1–10 (unchanged) -->
+        <div class="pin-deck">
+          <div class="pin pin-7">7</div>
+          <div class="pin pin-8">8</div>
+          <div class="pin pin-9">9</div>
+          <div class="pin pin-10">10</div>
+
+          <div class="pin pin-4">4</div>
+          <div class="pin pin-5">5</div>
+          <div class="pin pin-6">6</div>
+
+          <div class="pin pin-2">2</div>
+          <div class="pin pin-3">3</div>
+
+          <div class="pin pin-1">1</div>
+        </div>
       </div>
 
+      <p class="lane-label">
+        Right-handed lane orientation: 0 = far right, 39 = far left
+      </p>
     </div>
-
-    <p class="lane-label">
-      Right-handed lane orientation: 0 = far right, 39 = far left
-    </p>
   </div>
-</div>
 </main>
 
 <script>
@@ -155,7 +180,8 @@ function boardToX(board) {
 }
 
 function ftToY(ft) {
-  return 720 - ft * 12; // 0 ft = foul line bottom, 60 ft = top
+  // Lane & canvas are 720px tall; 0 ft = bottom, 60 ft = top
+  return 720 - ft * 12;
 }
 
 /* ===========================
@@ -168,13 +194,15 @@ function ftToY(ft) {
     const y = ft * 12;
 
     // 1 ft dots
-    const dot = document.createElement("div");
-    dot.className = "ruler-dot";
-    dot.style.bottom = y + "px";
-    ruler.appendChild(dot);
+    if (ft > 0 && ft < 60) { // optional: skip endpoints if you want a cleaner look
+      const dot = document.createElement("div");
+      dot.className = "ruler-dot";
+      dot.style.bottom = y + "px";
+      ruler.appendChild(dot);
+    }
 
     // Minor ticks every 5 ft (but not major markers)
-    if (ft % 5 === 0 && ft % 15 !== 0) {
+    if (ft % 5 === 0 && ft % 15 !== 0 && ft !== 0 && ft !== 60) {
       const tick = document.createElement("div");
       tick.className = "tick-minor";
       tick.style.bottom = y + "px";
@@ -190,6 +218,7 @@ function ftToY(ft) {
 
       const label = document.createElement("div");
       label.className = "tick-major-label";
+      // push label just above the tick visually
       label.style.bottom = (y + 4) + "px";
       label.textContent = ft + " ft";
       ruler.appendChild(label);
@@ -282,7 +311,7 @@ document.getElementById("travelForm").addEventListener("submit", function(e) {
   if (gutterDist) {
     html += `
       <p style="color:#ff6666;">
-        ⚠️ This line goes into the <strong>${gutter} gutter</strong> at 
+        ⚠️ This line goes into the <strong>${gutter} gutter</strong> at
         approximately <strong>${gutterDist.toFixed(1)} ft</strong>.
       </p>`;
   } else {
