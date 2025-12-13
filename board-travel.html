@@ -13,9 +13,9 @@
       margin-top: 2rem;
       display: flex;
       justify-content: center;
-      align-items: flex-start;   /* top-align ruler and lane */
+      align-items: flex-start;
       gap: 10px;
-      text-align: left;          /* let lane-label handle its own centering */
+      text-align: left;
     }
 
     .ruler {
@@ -32,7 +32,7 @@
     .tick-minor {
       position: absolute;
       left: 4px;
-      transform: translateY(50%);  /* match .distance-line behavior */
+      transform: translateY(50%); /* match .distance-line behavior */
     }
 
     .tick-major {
@@ -46,7 +46,6 @@
       left: 4px;
       color: #bbb;
       font-size: 0.7rem;
-      /* slight offset so text sits just above the tick */
       transform: translateY(50%);
     }
 
@@ -65,17 +64,37 @@
       background: #666;
     }
 
-    /* === Straight Line Path Canvas === */
+    /* === Lane stage ensures canvas matches lane exactly === */
+    .lane-container {
+      width: 312px;
+    }
+
+    .lane-stage {
+      position: relative;
+      width: 312px;
+      height: 720px;
+      display: block;
+    }
+
+    /* IMPORTANT: Canvas must be ABOVE the lane */
     #straightCanvas {
       position: absolute;
-      inset: 0;
+      left: 0;
+      top: 0;
+      width: 312px;
+      height: 720px;
+      z-index: 5;          /* on top */
       pointer-events: none;
     }
 
-    /* Keep the lane label nicely centered under just the lane-container */
-    .lane-container {
-      position: relative;
+    /* Make sure the lane is below the canvas */
+    .lane {
+      position: absolute;
+      left: 0;
+      top: 0;
       width: 312px;
+      height: 720px;
+      z-index: 1;          /* below canvas */
     }
 
     .lane-label {
@@ -134,32 +153,32 @@
 
     <!-- Lane + Straight Line Canvas -->
     <div class="lane-container">
-      <canvas id="straightCanvas" width="312" height="720"></canvas>
+      <div class="lane-stage">
+        <canvas id="straightCanvas" width="312" height="720"></canvas>
 
-      <div class="lane">
-        <div class="foul-line"></div>
-        <div class="headpin-line"></div>
+        <div class="lane">
+          <div class="foul-line"></div>
+          <div class="headpin-line"></div>
 
-        <!-- Distance lines at 15, 30, 45 ft -->
-        <div class="distance-line line-15">15 ft</div>
-        <div class="distance-line line-30">30 ft</div>
-        <div class="distance-line line-45">45 ft</div>
+          <div class="distance-line line-15">15 ft</div>
+          <div class="distance-line line-30">30 ft</div>
+          <div class="distance-line line-45">45 ft</div>
 
-        <!-- Pin deck and pins 1–10 (unchanged) -->
-        <div class="pin-deck">
-          <div class="pin pin-7">7</div>
-          <div class="pin pin-8">8</div>
-          <div class="pin pin-9">9</div>
-          <div class="pin pin-10">10</div>
+          <div class="pin-deck">
+            <div class="pin pin-7">7</div>
+            <div class="pin pin-8">8</div>
+            <div class="pin pin-9">9</div>
+            <div class="pin pin-10">10</div>
 
-          <div class="pin pin-4">4</div>
-          <div class="pin pin-5">5</div>
-          <div class="pin pin-6">6</div>
+            <div class="pin pin-4">4</div>
+            <div class="pin pin-5">5</div>
+            <div class="pin pin-6">6</div>
 
-          <div class="pin pin-2">2</div>
-          <div class="pin pin-3">3</div>
+            <div class="pin pin-2">2</div>
+            <div class="pin pin-3">3</div>
 
-          <div class="pin pin-1">1</div>
+            <div class="pin pin-1">1</div>
+          </div>
         </div>
       </div>
 
@@ -180,7 +199,7 @@ function boardToX(board) {
 }
 
 function ftToY(ft) {
-  // Lane & canvas are 720px tall; 0 ft = bottom, 60 ft = top
+  // 0 ft = bottom, 60 ft = top
   return 720 - ft * 12;
 }
 
@@ -194,7 +213,7 @@ function ftToY(ft) {
     const y = ft * 12;
 
     // 1 ft dots
-    if (ft > 0 && ft < 60) { // optional: skip endpoints if you want a cleaner look
+    if (ft > 0 && ft < 60) {
       const dot = document.createElement("div");
       dot.className = "ruler-dot";
       dot.style.bottom = y + "px";
@@ -218,7 +237,6 @@ function ftToY(ft) {
 
       const label = document.createElement("div");
       label.className = "tick-major-label";
-      // push label just above the tick visually
       label.style.bottom = (y + 4) + "px";
       label.textContent = ft + " ft";
       ruler.appendChild(label);
@@ -227,13 +245,29 @@ function ftToY(ft) {
 })();
 
 /* ===========================
+   DRAWING (DPI SAFE)
+   =========================== */
+function prepareCanvas(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  // Set internal resolution to match displayed size * DPR
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+  return ctx;
+}
+
+/* ===========================
    STRAIGHT LINE CALCULATION
    =========================== */
 document.getElementById("travelForm").addEventListener("submit", function(e) {
   e.preventDefault();
 
-  const R = Number(document.getElementById("releaseBoard").value); // 0–39
-  const A = Number(document.getElementById("arrowBoard").value);   // at 15 ft
+  const R = Number(document.getElementById("releaseBoard").value);
+  const A = Number(document.getElementById("arrowBoard").value);
 
   const slope = (A - R) / 15; // boards per foot
 
@@ -246,33 +280,23 @@ document.getElementById("travelForm").addEventListener("submit", function(e) {
   const board45 = boardAt(45);
   const board60 = boardAt(60);
 
-  /* ===========================
-     GUTTER DETECTION
-     =========================== */
+  /* GUTTER DETECTION */
   let gutter = null;
   let gutterDist = null;
 
   if (slope < 0) {
     // moving RIGHT → check right gutter at board 0
     const d = (0 - R) / slope;
-    if (d > 0 && d < 60) {
-      gutter = "RIGHT";
-      gutterDist = d;
-    }
+    if (d > 0 && d < 60) { gutter = "RIGHT"; gutterDist = d; }
   } else if (slope > 0) {
     // moving LEFT → check left gutter at board 39
     const d = (39 - R) / slope;
-    if (d > 0 && d < 60) {
-      gutter = "LEFT";
-      gutterDist = d;
-    }
+    if (d > 0 && d < 60) { gutter = "LEFT"; gutterDist = d; }
   }
 
-  /* ===========================
-     DRAW STRAIGHT LINE PATH
-     =========================== */
+  /* DRAW */
   const canvas = document.getElementById("straightCanvas");
-  const ctx = canvas.getContext("2d");
+  const ctx = prepareCanvas(canvas);
 
   ctx.clearRect(0, 0, 312, 720);
 
@@ -282,11 +306,11 @@ document.getElementById("travelForm").addEventListener("submit", function(e) {
   const xf = boardToX(board60);
   const yf = ftToY(60);
 
-  // If guttered early, adjust end point
   let endX = xf;
   let endY = yf;
+
   if (gutterDist) {
-    endX = boardToX(boardAt(gutterDist));
+    endX = boardToX(boardAt(gutterDist)); // should be 0 or 39 exactly
     endY = ftToY(gutterDist);
   }
 
@@ -297,9 +321,7 @@ document.getElementById("travelForm").addEventListener("submit", function(e) {
   ctx.lineTo(endX, endY);
   ctx.stroke();
 
-  /* ===========================
-     OUTPUT SUMMARY
-     =========================== */
+  /* OUTPUT SUMMARY */
   let html = `
     <p><strong>Straight-line prediction (no friction):</strong></p>
     <p>Board at 15 ft: <strong>${board15.toFixed(1)}</strong></p>
@@ -319,6 +341,14 @@ document.getElementById("travelForm").addEventListener("submit", function(e) {
   }
 
   document.getElementById("output").innerHTML = html;
+});
+
+// If someone rotates phone after drawing, the canvas can lose alignment.
+// This keeps it crisp.
+window.addEventListener("resize", () => {
+  const canvas = document.getElementById("straightCanvas");
+  const ctx = prepareCanvas(canvas);
+  ctx.clearRect(0, 0, 312, 720);
 });
 </script>
 
