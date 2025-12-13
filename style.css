@@ -45,9 +45,10 @@ a:hover {
 
 /* Main centered content wrapper (legacy / other pages) */
 .center {
-  max-width: 600px;
+  max-width: 900px;
   margin: 20vh auto 0;         /* push content down a bit and center */
   text-align: center;
+  padding: 0 20px;
 }
 
 /* Site header and nav (Beepping main) */
@@ -112,6 +113,27 @@ button {
 
 button:hover {
   background-color: #1e88e5;
+}
+
+/* Link-style primary button (for cards, etc.) */
+.btn-primary {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  background: #ff8a36;
+  color: #050505;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+.btn-primary:hover {
+  background: #ff9d59;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
 }
 
 /* ===========================
@@ -434,6 +456,38 @@ label {
 }
 
 /* ===========================
+   Homepage Tool Cards
+   =========================== */
+
+.tool-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-top: 40px;
+  text-align: left;
+}
+
+.tool-card {
+  background-color: #1a1a1a;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  border: 1px solid #2c2c36;
+}
+
+.tool-card h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+
+.tool-card p {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  color: #ccccdd;
+}
+
+/* ===========================
    Responsive tweaks
    =========================== */
 
@@ -445,5 +499,9 @@ label {
   .panel-controls {
     flex: none;
     width: 100%;
+  }
+
+  .center {
+    margin-top: 12vh;       /* reduce vertical offset on smaller screens */
   }
 }
