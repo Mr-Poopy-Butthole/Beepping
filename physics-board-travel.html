@@ -530,6 +530,10 @@
             <div id="trueBreakOut" class="summary-item-value">–</div>
           </div>
           <div>
+            <div class="summary-item-title">Breakpoint length</div>
+            <div id="trueBreakDistOut" class="summary-item-value">–</div>
+          </div>
+          <div>
             <div class="summary-item-title">Sliding distance</div>
             <div id="slidingDistOut" class="summary-item-value">–</div>
           </div>
@@ -619,6 +623,7 @@
     const entryAngleOut = document.getElementById('entryAngleOut');
     const breakBoardOut = document.getElementById('breakBoardOut');
     const trueBreakOut = document.getElementById('trueBreakOut');
+    const trueBreakDistOut = document.getElementById('trueBreakDistOut');
     const slidingDistOut = document.getElementById('slidingDistOut');
     const rollingDistOut = document.getElementById('rollingDistOut');
     const pocketOut = document.getElementById('pocketOut');
@@ -873,8 +878,7 @@
       for (let i = 0; i < allPoints.length; i++) {
         const p = allPoints[i];
         if (p.y < minYM || p.y > maxYM) continue;
-        // right gutter is positive x in this model
-        if (!best || p.x > best.x) best = p;
+        if (!best || p.x > best.x) best = p; // right-most
       }
       return best;
     }
@@ -925,22 +929,37 @@
 
         if (y >= laneLengthM || Math.abs(x) > halfLaneWidthM) break;
 
-        const mu = y < oilLengthM ? muOil : muDry;
+        // relative surface speed at contact
         const vRelX = vx - omegaSide * ballRadiusM;
         const vRelY = vy - omegaRoll * ballRadiusM;
         const vRelMag = Math.sqrt(vRelX * vRelX + vRelY * vRelY);
 
         if (sliding) {
           if (vRelMag < 0.02) {
+            // transition to pure roll
             sliding = false;
             yAtRoll = y;
             vx = omegaSide * ballRadiusM;
             vy = omegaRoll * ballRadiusM;
           } else {
-            const Fx = -mu * ballMassKg * g * (vRelX / (Math.abs(vRelX) + 1e-6));
-            const Fy = -mu * ballMassKg * g * (vRelY / (Math.abs(vRelY) + 1e-6));
+            let Fx = 0;
+            let Fy = 0;
+
+            if (y < oilLengthM) {
+              // In oil: essentially no side friction, only along-track drag
+              Fy = -muOil * ballMassKg * g * (vRelY / (Math.abs(vRelY) + 1e-6));
+              Fx = 0; // keep line straight in the conditioner
+            } else {
+              // On dry: full side and forward friction
+              Fx = -muDry * ballMassKg * g * (vRelX / (Math.abs(vRelX) + 1e-6));
+              Fy = -muDry * ballMassKg * g * (vRelY / (Math.abs(vRelY) + 1e-6));
+            }
+
+            // Linear acceleration
             vx += (Fx / ballMassKg) * dt;
             vy += (Fy / ballMassKg) * dt;
+
+            // Angular acceleration
             const alphaSide = -(Fx * ballRadiusM) / ballI;
             const alphaRoll = -(Fy * ballRadiusM) / ballI;
             omegaSide += alphaSide * dt;
@@ -1086,14 +1105,16 @@
         breakBoardOut.textContent = '–';
       }
 
-      // "True" breakpoint board (simulated farthest right between 30–55 ft)
+      // "True" breakpoint board & length (30–55 ft window)
       const trueBP = findBreakpointPoint(allCentral);
       if (trueBP) {
         const idxFromCenter = trueBP.x / boardWidthM;
         const boardFromRightTrue = 20 - idxFromCenter;
         trueBreakOut.textContent = boardFromRightTrue.toFixed(1) + ' board';
+        trueBreakDistOut.textContent = (trueBP.y / FT_TO_M).toFixed(1) + ' ft';
       } else {
         trueBreakOut.textContent = '–';
+        trueBreakDistOut.textContent = '–';
       }
 
       // Exit board
