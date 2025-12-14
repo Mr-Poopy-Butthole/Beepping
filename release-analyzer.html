@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Release Analyzer</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #f5f5f5;
+    }
+    header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header .left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    header h1 {
+      font-size: 18px;
+      margin: 0;
+    }
+    header .hint {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    header a {
+      color: #42a5f5;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 16px;
+      padding: 16px;
+    }
+    @media (max-width: 980px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 14px;
+      background: #151515;
+    }
+    .panel h2 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      letter-spacing: 0.3px;
+      opacity: 0.95;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .row3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      opacity: 0.9;
+      margin-bottom: 6px;
+    }
+    input[type="number"], input[type="text"], select {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 8px;
+      border: 1px solid #2a2a2a;
+      background: #0f0f0f;
+      color: #f5f5f5;
+      outline: none;
+    }
+    input[type="file"] {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #2a2a2a;
+      background: #0f0f0f;
+      color: #f5f5f5;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid #2a2a2a;
+      background: #202020;
+      color: #f5f5f5;
+      cursor: pointer;
+    }
+    button:hover { background: #262626; }
+    button.primary { background: #2b5cff; border-color: #2b5cff; }
+    button.primary:hover { background: #2a52df; }
+    button.danger { background: #6a1b1b; border-color: #6a1b1b; }
+    button.danger:hover { background: #7a2424; }
+
+    .stack { display: flex; flex-direction: column; gap: 10px; }
+
+    .viewer {
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid #2a2a2a;
+      background: #000;
+      min-height: 320px;
+    }
+    video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      pointer-events: auto;
+    }
+
+    .small {
+      font-size: 12px;
+      opacity: 0.85;
+      line-height: 1.35;
+    }
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #2a2a2a;
+      background: #111;
+      font-size: 12px;
+      opacity: 0.95;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .metric {
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 10px;
+      background: #111;
+    }
+    .metric .k {
+      font-size: 11px;
+      opacity: 0.75;
+    }
+    .metric .v {
+      font-size: 18px;
+      margin-top: 4px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      resize: vertical;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #2a2a2a;
+      background: #0f0f0f;
+      color: #f5f5f5;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="left">
+      <h1>Release Analyzer</h1>
+      <div class="hint">Track your ball on video to estimate speed, rev rate, and the traction/breakpoint distances for sim tuning.</div>
+    </div>
+    <div class="right">
+      <!-- Change href to your simulator page -->
+      <a href="index.html">Back to Physics Simulator</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT: controls -->
+    <section class="panel">
+      <h2>1) Load video</h2>
+      <div class="stack">
+        <input id="fileInput" type="file" accept="video/*" />
+        <div class="row">
+          <button id="btnStartCam">Use Camera</button>
+          <button id="btnStopCam" class="danger" disabled>Stop Camera</button>
+        </div>
+        <div class="small">
+          Tip: A phone video from the side is best. Try to keep the camera steady and include lane boards/arrows if possible.
+        </div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid #2a2a2a;margin:14px 0;">
+
+      <h2>2) Calibration</h2>
+      <div class="row">
+        <div>
+          <label>Video FPS (if unknown, try 60)</label>
+          <input id="fps" type="number" value="60" min="1" step="1"/>
+        </div>
+        <div>
+          <label>Lane distance per pixel (ft/px)</label>
+          <input id="ftPerPx" type="number" value="0.02" min="0" step="0.0001"/>
+        </div>
+      </div>
+      <div class="small">
+        <div class="pill">Fast setup</div>
+        Set <b>ft/px</b> by measuring a known lane length segment in the video (example: foul line to arrows ≈ 15 ft, foul line to pins 60 ft).
+        Pause the video, then use any on-screen ruler/markup app to estimate pixels between those points.
+        <br><br>
+        If you don’t calibrate well, your <b>mph</b> will be off, but your <b>pickup/breakpoint distances</b> still help tune oil/friction.
+      </div>
+
+      <hr style="border:0;border-top:1px solid #2a2a2a;margin:14px 0;">
+
+      <h2>3) Tracking mode</h2>
+      <div class="row">
+        <div>
+          <label>Click action</label>
+          <select id="mode">
+            <option value="ball">Track ball center (speed)</option>
+            <option value="marker">Track logo/marker (rev rate)</option>
+            <option value="pickup">Mark traction/pickup point (ft)</option>
+            <option value="breakpoint">Mark breakpoint point (ft)</option>
+          </select>
+        </div>
+        <div>
+          <label>Step (frames)</label>
+          <input id="stepFrames" type="number" value="1" min="1" step="1"/>
+        </div>
+      </div>
+
+      <div class="row3">
+        <button id="btnPrev">◀ Prev</button>
+        <button id="btnPlayPause" class="primary">Play / Pause</button>
+        <button id="btnNext">Next ▶</button>
+      </div>
+
+      <div class="row">
+        <button id="btnUndo">Undo last point</button>
+        <button id="btnClear" class="danger">Clear all points</button>
+      </div>
+
+      <hr style="border:0;border-top:1px solid #2a2a2a;margin:14px 0;">
+
+      <h2>4) Outputs</h2>
+      <div class="metrics">
+        <div class="metric">
+          <div class="k">Launch speed</div>
+          <div class="v" id="mphOut">— mph</div>
+        </div>
+        <div class="metric">
+          <div class="k">Rev rate (optional)</div>
+          <div class="v" id="rpmOut">— rpm</div>
+        </div>
+        <div class="metric">
+          <div class="k">Traction / pickup</div>
+          <div class="v" id="pickupOut">— ft</div>
+        </div>
+        <div class="metric">
+          <div class="k">Breakpoint</div>
+          <div class="v" id="bpOut">— ft</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label>Copy-paste into simulator (manual)</label>
+        <textarea id="exportBox" readonly></textarea>
+      </div>
+
+      <div class="row">
+        <button id="btnCopy" class="primary">Copy to clipboard</button>
+        <button id="btnRecalc">Recalculate</button>
+      </div>
+
+      <div class="small">
+        <b>About tilt/axis rotation:</b> this page focuses on what’s reliable from video: speed, rev rate, and where the ball picks up.
+        If you want, we can add a second step that estimates axis rotation/tilt from a “behind the bowler” view by marking PAP and ring migration frames.
+      </div>
+    </section>
+
+    <!-- RIGHT: video + overlay -->
+    <section class="panel">
+      <h2>Video viewer (click on the ball)</h2>
+
+      <div class="viewer" id="viewer">
+        <video id="video" playsinline></video>
+        <canvas id="overlay"></canvas>
+      </div>
+
+      <div class="small" style="margin-top:10px;">
+        Workflow suggestion:
+        <ol>
+          <li>Pause near release.</li>
+          <li>Mode = <b>Track ball center</b>. Click the ball each frame for ~15-30 frames.</li>
+          <li>Mode = <b>Mark traction/pickup</b>. Scrub to where it first noticeably “hooks” (end of skid) and click the ball once.</li>
+          <li>Mode = <b>Mark breakpoint</b>. Scrub to max-outside point and click once.</li>
+          <li>Copy outputs and paste into the simulator tab.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const el = (id) => document.getElementById(id);
+
+    const video = el('video');
+    const canvas = el('overlay');
+    const ctx = canvas.getContext('2d');
+
+    const fileInput = el('fileInput');
+    const btnStartCam = el('btnStartCam');
+    const btnStopCam = el('btnStopCam');
+
+    const fpsInput = el('fps');
+    const ftPerPxInput = el('ftPerPx');
+    const modeSelect = el('mode');
+    const stepFramesInput = el('stepFrames');
+
+    const btnPrev = el('btnPrev');
+    const btnNext = el('btnNext');
+    const btnPlayPause = el('btnPlayPause');
+
+    const btnUndo = el('btnUndo');
+    const btnClear = el('btnClear');
+
+    const mphOut = el('mphOut');
+    const rpmOut = el('rpmOut');
+    const pickupOut = el('pickupOut');
+    const bpOut = el('bpOut');
+    const exportBox = el('exportBox');
+
+    const btnCopy = el('btnCopy');
+    const btnRecalc = el('btnRecalc');
+
+    // Data: points are {t, x, y} where t is time in seconds, x/y in canvas px.
+    let ballPts = [];
+    let markerPts = [];
+    let pickupMark = null;    // {x,y}
+    let breakpointMark = null;// {x,y}
+
+    let stream = null;
+
+    function resizeCanvasToVideo() {
+      const rect = video.getBoundingClientRect();
+      canvas.width = Math.floor(rect.width);
+      canvas.height = Math.floor(rect.height);
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      drawOverlay();
+    }
+
+    window.addEventListener('resize', resizeCanvasToVideo);
+
+    video.addEventListener('loadedmetadata', () => {
+      // Ensure we can seek frame-ish
+      resizeCanvasToVideo();
+      drawOverlay();
+    });
+
+    video.addEventListener('timeupdate', () => {
+      // Keep overlay in sync while playing
+      drawOverlay();
+    });
+
+    fileInput.addEventListener('change', () => {
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      stopCameraIfNeeded();
+      const url = URL.createObjectURL(f);
+      video.srcObject = null;
+      video.src = url;
+      video.load();
+      clearAll();
+    });
+
+    async function startCamera() {
+      try {
+        stopCameraIfNeeded();
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.src = '';
+        video.srcObject = stream;
+        await video.play();
+        btnStopCam.disabled = false;
+        clearAll();
+      } catch (e) {
+        alert('Camera not available or permission denied.');
+      }
+    }
+
+    function stopCameraIfNeeded() {
+      if (!stream) return;
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+      btnStopCam.disabled = true;
+    }
+
+    btnStartCam.addEventListener('click', startCamera);
+    btnStopCam.addEventListener('click', stopCameraIfNeeded);
+
+    // Frame stepping
+    function stepFrame(dir) {
+      const fps = Number(fpsInput.value || 60);
+      const stepFrames = Number(stepFramesInput.value || 1);
+      const dt = stepFrames / fps;
+      video.pause();
+      video.currentTime = Math.max(0, video.currentTime + dir * dt);
+      drawOverlay();
+    }
+    btnPrev.addEventListener('click', () => stepFrame(-1));
+    btnNext.addEventListener('click', () => stepFrame(1));
+    btnPlayPause.addEventListener('click', () => {
+      if (video.paused) video.play();
+      else video.pause();
+    });
+
+    // Click tracking on canvas
+    canvas.addEventListener('click', (ev) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (ev.clientX - rect.left);
+      const y = (ev.clientY - rect.top);
+
+      const mode = modeSelect.value;
+      const t = video.currentTime;
+
+      if (mode === 'ball') {
+        ballPts.push({ t, x, y });
+      } else if (mode === 'marker') {
+        markerPts.push({ t, x, y });
+      } else if (mode === 'pickup') {
+        pickupMark = { x, y, t };
+      } else if (mode === 'breakpoint') {
+        breakpointMark = { x, y, t };
+      }
+
+      recalc();
+      drawOverlay();
+    });
+
+    btnUndo.addEventListener('click', () => {
+      const mode = modeSelect.value;
+      if (mode === 'ball') ballPts.pop();
+      else if (mode === 'marker') markerPts.pop();
+      else if (mode === 'pickup') pickupMark = null;
+      else if (mode === 'breakpoint') breakpointMark = null;
+
+      recalc();
+      drawOverlay();
+    });
+
+    btnClear.addEventListener('click', () => {
+      clearAll();
+      drawOverlay();
+    });
+
+    function clearAll() {
+      ballPts = [];
+      markerPts = [];
+      pickupMark = null;
+      breakpointMark = null;
+      mphOut.textContent = '— mph';
+      rpmOut.textContent = '— rpm';
+      pickupOut.textContent = '— ft';
+      bpOut.textContent = '— ft';
+      exportBox.value = '';
+    }
+
+    btnRecalc.addEventListener('click', recalc);
+
+    function drawPoint(p, label, radius=5) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = '12px Arial';
+      ctx.fillText(label, p.x + 8, p.y - 8);
+    }
+
+    function drawOverlay() {
+      // Clear
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Simple visual styling
+      ctx.lineWidth = 2;
+
+      // Ball path
+      if (ballPts.length > 0) {
+        ctx.strokeStyle = '#2b5cff';
+        ctx.fillStyle = '#2b5cff';
+        ctx.beginPath();
+        for (let i=0; i<ballPts.length; i++) {
+          const p = ballPts[i];
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+
+        // Points
+        for (let i=0; i<ballPts.length; i++) {
+          drawPoint(ballPts[i], `${i+1}`, 4);
+        }
+      }
+
+      // Marker points (for rev-rate)
+      if (markerPts.length > 0) {
+        ctx.strokeStyle = '#00c853';
+        ctx.fillStyle = '#00c853';
+        ctx.beginPath();
+        for (let i=0; i<markerPts.length; i++) {
+          const p = markerPts[i];
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+        for (let i=0; i<markerPts.length; i++) {
+          drawPoint(markerPts[i], `M${i+1}`, 4);
+        }
+      }
+
+      // Pickup and breakpoint marks
+      if (pickupMark) {
+        ctx.fillStyle = '#ffab00';
+        drawPoint(pickupMark, 'Pickup', 6);
+      }
+      if (breakpointMark) {
+        ctx.fillStyle = '#ff5252';
+        drawPoint(breakpointMark, 'BP', 6);
+      }
+    }
+
+    function dist(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    function recalc() {
+      const fps = Number(fpsInput.value || 60);
+      const ftPerPx = Number(ftPerPxInput.value || 0.02);
+
+      // Speed estimate from ballPts: use total distance / total time across the tracked segment.
+      // (Using full segment smooths clicking noise.)
+      let mph = null;
+      if (ballPts.length >= 2) {
+        const first = ballPts[0];
+        const last = ballPts[ballPts.length - 1];
+        const px = dist(first, last);
+        const ft = px * ftPerPx;
+        const dt = (last.t - first.t);
+        if (dt > 0.0001) {
+          const ftPerSec = ft / dt;
+          mph = ftPerSec * (3600/5280);
+        }
+      }
+
+      // Rev rate (optional):
+      // If user clicks the same visible marker/logo each frame, we can approximate angular speed
+      // by measuring change in angle around the ball center.
+      // This works best if they click: (1) ball center each frame AND (2) marker each frame.
+      let rpm = null;
+      if (markerPts.length >= 3 && ballPts.length >= 3) {
+        // Pair points by nearest time (simple matching)
+        const pairs = [];
+        for (const m of markerPts) {
+          let best = null;
+          let bestDt = 1e9;
+          for (const b of ballPts) {
+            const dtt = Math.abs(b.t - m.t);
+            if (dtt < bestDt) { bestDt = dtt; best = b; }
+          }
+          if (best && bestDt < (1 / fps) * 1.5) {
+            pairs.push({ t: m.t, bx: best.x, by: best.y, mx: m.x, my: m.y });
+          }
+        }
+
+        if (pairs.length >= 3) {
+          // Compute angle of marker around ball center
+          const ang = pairs.map(p => ({
+            t: p.t,
+            a: Math.atan2(p.my - p.by, p.mx - p.bx)
+          }));
+
+          // Unwrap angle and compute average angular velocity
+          let totalDtheta = 0;
+          let totalDt = 0;
+          for (let i=1; i<ang.length; i++) {
+            let d = ang[i].a - ang[i-1].a;
+            // unwrap to [-pi, pi]
+            while (d > Math.PI) d -= 2*Math.PI;
+            while (d < -Math.PI) d += 2*Math.PI;
+
+            const dt = ang[i].t - ang[i-1].t;
+            if (dt > 0) {
+              totalDtheta += d;
+              totalDt += dt;
+            }
+          }
+
+          if (totalDt > 0.0001) {
+            const radPerSec = Math.abs(totalDtheta / totalDt);
+            const revPerSec = radPerSec / (2*Math.PI);
+            rpm = revPerSec * 60;
+          }
+        }
+      }
+
+      // Pickup & breakpoint distances:
+      // We can't know absolute downlane feet from a single click without a lane origin reference.
+      // For this first version, we export them as "relative to release" using pixel distance from the first ball point.
+      // That’s still useful for oil length tuning (pickup near oil end, etc.).
+      let pickupFt = null;
+      let bpFt = null;
+
+      if (ballPts.length >= 1) {
+        const origin = ballPts[0];
+        if (pickupMark) pickupFt = dist(origin, pickupMark) * ftPerPx;
+        if (breakpointMark) bpFt = dist(origin, breakpointMark) * ftPerPx;
+      }
+
+      mphOut.textContent = (mph !== null) ? `${mph.toFixed(1)} mph` : '— mph';
+      rpmOut.textContent = (rpm !== null) ? `${rpm.toFixed(0)} rpm` : '— rpm';
+      pickupOut.textContent = (pickupFt !== null) ? `${pickupFt.toFixed(1)} ft` : '— ft';
+      bpOut.textContent = (bpFt !== null) ? `${bpFt.toFixed(1)} ft` : '— ft';
+
+      // Export block for simulator tab
+      const exportObj = {
+        launchSpeedMph: (mph !== null ? Number(mph.toFixed(2)) : null),
+        revRateRpm: (rpm !== null ? Number(rpm.toFixed(0)) : null),
+        tractionPickupFt_fromRelease: (pickupFt !== null ? Number(pickupFt.toFixed(2)) : null),
+        breakpointFt_fromRelease: (bpFt !== null ? Number(bpFt.toFixed(2)) : null),
+        videoFps: fps,
+        calibrationFtPerPx: ftPerPx
+      };
+
+      exportBox.value =
+`// Paste these into the simulator inputs (manual)
+Launch Speed (mph): ${exportObj.launchSpeedMph ?? '—'}
+Rev Rate (rpm):     ${exportObj.revRateRpm ?? '—'}
+Pickup (ft):        ${exportObj.tractionPickupFt_fromRelease ?? '—'}   // from release (relative)
+Breakpoint (ft):    ${exportObj.breakpointFt_fromRelease ?? '—'}       // from release (relative)
+
+// Calibration notes
+Video FPS:          ${exportObj.videoFps}
+ft per pixel:       ${exportObj.calibrationFtPerPx}
+
+// JSON (optional)
+${JSON.stringify(exportObj, null, 2)}
+`;
+    }
+
+    btnCopy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(exportBox.value);
+      } catch (e) {
+        alert('Copy failed. You can manually select and copy the text.');
+      }
+    });
+
+    // Keep canvas sized to the displayed video element
+    const ro = new ResizeObserver(() => resizeCanvasToVideo());
+    ro.observe(el('viewer'));
+  </script>
+</body>
+</html>
