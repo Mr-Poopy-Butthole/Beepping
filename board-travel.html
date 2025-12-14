@@ -15,7 +15,7 @@
       justify-content: center;
       align-items: flex-start;   /* top-align ruler and lane */
       gap: 10px;
-      text-align: left;          /* lane-label will center itself */
+      text-align: left;
     }
 
     .ruler {
@@ -69,6 +69,7 @@
       position: absolute;
       inset: 0;
       pointer-events: none;
+      z-index: 2;      /* <<< draw on top of lane */
     }
 
     .lane-container {
@@ -83,6 +84,12 @@
       color: #ccc;
     }
 
+    /* Ensure lane is under the canvas */
+    .lane {
+      position: relative;
+      z-index: 1;
+    }
+
     /* === Pin deck & pin positions (override defaults) === */
 
     .lane .pin-deck {
@@ -95,7 +102,7 @@
       border-bottom: 2px solid rgba(255, 255, 255, 0.25);
       background: linear-gradient(
         to bottom,
-        rgba(255, 255, 255, 0.06),
+        rgba(255, 255, 255, 0.08),
         transparent
       );
       pointer-events: none;
@@ -129,7 +136,7 @@
     .lane .pin-2  { top: 46px; left: calc(50% - 12px); transform: translateX(-50%); }
     .lane .pin-3  { top: 46px; left: calc(50% + 12px); transform: translateX(-50%); }
 
-    /* Headpin (1) – closest to 45ft line side */
+    /* Headpin (1) */
     .lane .pin-1  { top: 64px; left: 50%;              transform: translateX(-50%); }
   </style>
 </head>
