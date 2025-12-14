@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Physics-Based Bowling Line Explorer v1.0.0 </title>
+  <title>Physics-Based Bowling Line Explorer</title>
   <style>
     :root {
       --bg: #0b0b10;
@@ -16,9 +16,7 @@
       --yellow: #ffd166;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -162,9 +160,7 @@
       transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease, border-color 0.15s ease;
     }
 
-    button.secondary {
-      background: rgba(10,10,25,0.9);
-    }
+    button.secondary { background: rgba(10,10,25,0.9); }
 
     button:hover {
       transform: translateY(-1px);
@@ -275,17 +271,9 @@
       color: var(--text-main);
     }
 
-    .summary-item-value.ok {
-      color: var(--success);
-    }
-
-    .summary-item-value.warn {
-      color: var(--yellow);
-    }
-
-    .summary-item-value.bad {
-      color: var(--danger);
-    }
+    .summary-item-value.ok   { color: var(--success); }
+    .summary-item-value.warn { color: var(--yellow); }
+    .summary-item-value.bad  { color: var(--danger); }
 
     .note {
       font-size: 0.72rem;
@@ -294,14 +282,12 @@
     }
 
     @media (max-width: 900px) {
-      .container {
-        grid-template-columns: 1fr;
-      }
+      .container { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <h1>Physics-Based Bowling Line Explorer</h1>
+  <h1>Physics-Based Bowling Line Explorer v1.0</h1>
   <div class="subtitle">
     A user-friendly introduction to Ji et al.’s rigid-body bowling model: explore how your
     target board, release, and lane pattern change the path, entry angle, and “miss room”
@@ -468,33 +454,39 @@
             ]]></script>
           </g>
 
-          <!-- Foul line -->
+          <!-- Foul line + approach dots -->
           <line x1="30" y1="700" x2="230" y2="700" stroke="#333" stroke-width="2" />
-          <g stroke="#444" stroke-width="2">
-            <circle cx="90" cy="705" r="1.6" fill="#333" />
-            <circle cx="130" cy="705" r="1.6" fill="#333" />
-            <circle cx="170" cy="705" r="1.6" fill="#333" />
+          <g stroke="#222" stroke-width="1.5" fill="#ddd">
+            <circle cx="82" cy="705" r="1.4" />
+            <circle cx="106" cy="705" r="1.4" />
+            <circle cx="130" cy="705" r="1.4" />
+            <circle cx="154" cy="705" r="1.4" />
+            <circle cx="178" cy="705" r="1.4" />
           </g>
 
-          <!-- Arrows at ~15 ft -->
-          <g fill="#b37436" opacity="0.85">
-            <polygon points="95,520 100,510 105,520" />
-            <polygon points="115,520 120,510 125,520" />
-            <polygon points="135,520 140,510 145,520" />
-            <polygon points="155,520 160,510 165,520" />
+          <!-- Arrows at ~15 ft (7-arrow fan) -->
+          <g id="arrowsGroup" fill="#d5c1a1" stroke="#8a6b44" stroke-width="0.7" opacity="0.9">
+            <!-- coordinates tuned by eye for V-shape across lane -->
+            <polygon points="82,520 86,509 90,520" />
+            <polygon points="96,520 100,509 104,520" />
+            <polygon points="110,520 114,509 118,520" />
+            <polygon points="124,520 128,509 132,520" />
+            <polygon points="138,520 142,509 146,520" />
+            <polygon points="152,520 156,509 160,520" />
+            <polygon points="166,520 170,509 174,520" />
           </g>
 
           <!-- Oil zone (filled via JS) -->
           <rect id="oilZone" x="30" y="120" width="200" height="0"
                 fill="rgba(0,120,255,0.16)" stroke="rgba(0,120,255,0.35)" stroke-width="1" />
 
-          <!-- Baker Box (Mark Baker: boards 5–8, 42–46 ft) -->
+          <!-- Baker Box (boards 5–8, 42–46 ft) -->
           <rect id="bakerBox" x="0" y="0" width="0" height="0"
                 fill="rgba(0,255,255,0.15)" stroke="rgba(0,255,255,0.8)"
                 stroke-width="1.2" stroke-dasharray="4 3" />
 
           <!-- Pin deck region (visual) -->
-          <rect id="pinDeckRect" x="30" y="20" width="200" height="34" fill="#f0e6d5" opacity="0.95" stroke="#ccb9a4" stroke-width="1.5" />
+          <rect id="pinDeckRect" x="30" y="20" width="200" height="34" fill="#f5ecdd" opacity="0.98" stroke="#ccb9a4" stroke-width="1.5" />
 
           <!-- Pins -->
           <g id="pinsGroup"></g>
@@ -529,6 +521,10 @@
           <div>
             <div class="summary-item-title">Entry angle</div>
             <div id="entryAngleOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Breakpoint board @ 43 ft</div>
+            <div id="breakBoardOut" class="summary-item-value">–</div>
           </div>
           <div>
             <div class="summary-item-title">Sliding distance</div>
@@ -587,10 +583,13 @@
     const MPH_TO_MPS = 0.44704;
 
     const ENTRY_DISTANCE_FT = 60;
-    const PIN_DECK_LENGTH_FT = 6;          // extend visual deck to 6 ft behind headpin
+    const PIN_DECK_LENGTH_FT = 6;              // visual deck behind headpin
     const laneLengthFtTotal = ENTRY_DISTANCE_FT + PIN_DECK_LENGTH_FT;
     const laneLengthM = laneLengthFtTotal * FT_TO_M;
     const ENTRY_Y = ENTRY_DISTANCE_FT * FT_TO_M;
+
+    const BREAKPOINT_DIST_FT = 43;             // match StrikeTrack-style readout
+    const BREAKPOINT_Y = BREAKPOINT_DIST_FT * FT_TO_M;
 
     const laneWidthM = 1.0668;
     const halfLaneWidthM = laneWidthM / 2;
@@ -614,6 +613,7 @@
 
     const entryBoardOut = document.getElementById('entryBoardOut');
     const entryAngleOut = document.getElementById('entryAngleOut');
+    const breakBoardOut = document.getElementById('breakBoardOut');
     const slidingDistOut = document.getElementById('slidingDistOut');
     const rollingDistOut = document.getElementById('rollingDistOut');
     const pocketOut = document.getElementById('pocketOut');
@@ -729,14 +729,33 @@
 
       pins.forEach(pin => {
         const { x, y } = worldToSvg(pin.x, pin.y);
-        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        c.setAttribute('cx', x);
-        c.setAttribute('cy', y);
-        c.setAttribute('r', 4);
-        c.setAttribute('fill', '#ffffff');
-        c.setAttribute('stroke', '#333333');
-        c.setAttribute('stroke-width', '1.2');
-        pinsGroup.appendChild(c);
+        const gPin = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        gPin.setAttribute('transform', `translate(${x},${y})`);
+
+        const body = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        body.setAttribute('d', 'M -2.4 0 L -2.8 -7 Q 0 -11 2.8 -7 L 2.4 0 Z');
+        body.setAttribute('fill', '#ffffff');
+        body.setAttribute('stroke', '#d0d0d0');
+        body.setAttribute('stroke-width', '0.6');
+
+        const neck = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        neck.setAttribute('x', -2.1);
+        neck.setAttribute('y', -6.2);
+        neck.setAttribute('width', 4.2);
+        neck.setAttribute('height', 0.7);
+        neck.setAttribute('fill', '#ff4b5c');
+
+        const base = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+        base.setAttribute('cx', 0);
+        base.setAttribute('cy', 0.4);
+        base.setAttribute('rx', 2.4);
+        base.setAttribute('ry', 0.8);
+        base.setAttribute('fill', '#555');
+
+        gPin.appendChild(base);
+        gPin.appendChild(body);
+        gPin.appendChild(neck);
+        pinsGroup.appendChild(gPin);
       });
     }
 
@@ -918,7 +937,7 @@
       const exitPoint = findPointAtY(allPoints, laneLengthM);
       const offLane = allPoints.length > 0 && Math.abs(allPoints[allPoints.length - 1].x) > halfLaneWidthM;
 
-      return { pointsSliding, pointsRolling, yAtRoll, entryPoint, exitPoint, offLane };
+      return { pointsSliding, pointsRolling, yAtRoll, entryPoint, exitPoint, offLane, allPoints };
     }
 
     function buildPath(points) {
@@ -944,7 +963,7 @@
       const goodAngle = angleAbs >= 3.0 && angleAbs <= 6.5;
 
       const xExit = exitPoint.x;
-      const goodExit = Math.abs(xExit) <= 6 * IN_TO_M; // roughly exits between 8 and 9
+      const goodExit = Math.abs(xExit) <= 6 * IN_TO_M; // approx exits between 8 and 9
 
       return inPocketWindow && goodAngle && goodExit;
     }
@@ -999,7 +1018,7 @@
       pathSliding.setAttribute('d', buildPath(centralSim.pointsSliding));
       pathRolling.setAttribute('d', buildPath(centralSim.pointsRolling));
 
-      const allCentral = centralSim.pointsSliding.concat(centralSim.pointsRolling);
+      const allCentral = centralSim.allPoints || [];
       if (allCentral.length > 0) {
         const last = allCentral[allCentral.length - 1];
         const { x: bx, y: by } = worldToSvg(last.x, last.y);
@@ -1010,6 +1029,7 @@
         ballMarker.setAttribute('cy', -100);
       }
 
+      // Entry / sliding / rolling / pocket
       if (centralSim.entryPoint) {
         const xEntry = centralSim.entryPoint.x;
         const boardIndexFromCenter = xEntry / boardWidthM;
@@ -1036,6 +1056,17 @@
           pocketOut.textContent = '–';
       }
 
+      // Breakpoint board at 43 ft
+      const breakPoint = findPointAtY(allCentral, BREAKPOINT_Y);
+      if (breakPoint) {
+        const idxFromCenter = breakPoint.x / boardWidthM;
+        const boardFromRightBreak = 20 - idxFromCenter;
+        breakBoardOut.textContent = boardFromRightBreak.toFixed(1) + ' board';
+      } else {
+        breakBoardOut.textContent = '–';
+      }
+
+      // Exit board
       if (centralSim.exitPoint) {
         const xExit = centralSim.exitPoint.x;
         const idxFromCenter = xExit / boardWidthM;
@@ -1049,6 +1080,7 @@
       gutterOut.textContent = offLane ? 'Gutter / off lane' : 'In play';
       gutterOut.className = 'summary-item-value ' + (offLane ? 'bad' : 'ok');
 
+      // Monte Carlo strike probabilities
       const tight = runMonteCarlo(1, baseParams, targetBoard);
       const league = runMonteCarlo(3, baseParams, targetBoard);
       const wild = runMonteCarlo(10, baseParams, targetBoard);
@@ -1075,6 +1107,7 @@
       else if (tight.probability >= 0.5) windowStr = '±1 board (~tight)';
       windowOut.textContent = windowStr;
 
+      // Miss cone for active profile
       while (coneGroup.firstChild) coneGroup.removeChild(coneGroup.firstChild);
 
       let profileData = tight;
