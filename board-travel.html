@@ -6,14 +6,38 @@
   <link rel="stylesheet" href="/style.css">
 
   <style>
-    /* === Lane Ruler + Layout Overrides for this page === */
+    /* === Page layout for Board Travel === */
+
+    .bt-main {
+      max-width: 1200px;
+      margin: 0 auto 40px;
+      padding: 0 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 32px;
+    }
+
+    .bt-left {
+      flex: 0 0 360px;
+    }
+
+    .bt-right {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end; /* lane pushed to the right side */
+    }
+
+    .bt-left h2 {
+      margin-top: 0;
+    }
+
+    /* === Lane Ruler + Layout Overrides === */
 
     .lane-wrapper {
       position: relative;
-      margin-top: 2rem;
       display: flex;
       justify-content: center;
-      align-items: flex-start;   /* top-align ruler and lane */
+      align-items: flex-end;   /* bottom-align ruler and lane (foul line) */
       gap: 10px;
       text-align: left;
     }
@@ -85,6 +109,7 @@
     }
 
     /* Extend lane height to include pin deck (90px) */
+
     .lane {
       position: relative;
       z-index: 1;
@@ -115,6 +140,16 @@
       height: 90px;   /* pin-deck depth above 60 ft line */
       pointer-events: none;
     }
+
+    @media (max-width: 900px) {
+      .bt-main {
+        flex-direction: column;
+      }
+
+      .bt-right {
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 
@@ -128,65 +163,71 @@
   </nav>
 </header>
 
-<main class="center">
-  <h2>Straight-Line Aiming Calculator (Right-Handed)</h2>
-  <p>
-    Enter your <strong>release board</strong> at the foul line and your
-    <strong>target board</strong> at the arrows (15 ft). This tool shows where the ball
-    would go <em>with zero friction / zero hook</em>.
-  </p>
-
-  <form id="travelForm">
+<main class="bt-main">
+  <!-- LEFT: inputs + summary -->
+  <section class="bt-left">
+    <h2>Straight-Line Aiming Calculator (Right-Handed)</h2>
     <p>
-      <label>
-        Release Board (0 = far right gutter, 39 = far left):
-        <input type="number" id="releaseBoard" min="0" max="39" required>
-      </label>
+      Enter your <strong>release board</strong> at the foul line and your
+      <strong>target board</strong> at the arrows (15 ft). This tool shows where the ball
+      would go <em>with zero friction / zero hook</em>.
     </p>
 
-    <p>
-      <label>
-        Arrow Board (at 15 ft):
-        <input type="number" id="arrowBoard" min="0" max="39" required>
-      </label>
-    </p>
-
-    <p>
-      <button type="submit">Calculate Straight Path</button>
-    </p>
-  </form>
-
-  <div id="output" class="result-box"></div>
-
-  <div class="lane-wrapper">
-
-    <!-- LEFT SIDE RULER (0–60 ft only) -->
-    <div class="ruler" id="ruler"></div>
-
-    <!-- Lane + Straight Line Canvas + Pin Deck -->
-    <div class="lane-container">
-      <canvas id="straightCanvas" width="312" height="810"></canvas>
-
-      <div class="lane">
-        <div class="foul-line"></div>
-        <div class="headpin-line"></div>
-
-        <!-- Distance lines at 15, 30, 45 ft inside the 0–60 ft section -->
-        <div class="distance-line line-15">15 ft</div>
-        <div class="distance-line line-30">30 ft</div>
-        <div class="distance-line line-45">45 ft</div>
-        <!-- 60 ft line at the front of the pin deck -->
-        <div class="line-60">60 ft</div>
-
-        <!-- SVG pin deck at the very top (beyond 60 ft) -->
-        <div id="pinDeckSvg" class="pin-deck-svg"></div>
-      </div>
-
-      <p class="lane-label">
-        Right-handed lane orientation: 0 = far right, 39 = far left
+    <form id="travelForm">
+      <p>
+        <label>
+          Release Board (0 = far right gutter, 39 = far left):
+          <input type="number" id="releaseBoard" min="0" max="39" required>
+        </label>
       </p>
+
+      <p>
+        <label>
+          Arrow Board (at 15 ft):
+          <input type="number" id="arrowBoard" min="0" max="39" required>
+        </label>
+      </p>
+
+      <p>
+        <button type="submit">Calculate Straight Path</button>
+      </p>
+    </form>
+
+    <div id="output" class="result-box"></div>
+  </section>
+
+  <!-- RIGHT: ruler + lane -->
+  <section class="bt-right">
+    <div class="lane-wrapper">
+
+      <!-- LEFT SIDE RULER (0–60 ft only) -->
+      <div class="ruler" id="ruler"></div>
+
+      <!-- Lane + Straight Line Canvas + Pin Deck -->
+      <div class="lane-container">
+        <canvas id="straightCanvas" width="312" height="810"></canvas>
+
+        <div class="lane">
+          <div class="foul-line"></div>
+          <div class="headpin-line"></div>
+
+          <!-- Distance lines at 15, 30, 45 ft inside the 0–60 ft section -->
+          <div class="distance-line line-15">15 ft</div>
+          <div class="distance-line line-30">30 ft</div>
+          <div class="distance-line line-45">45 ft</div>
+          <!-- 60 ft line at the front of the pin deck -->
+          <div class="line-60">60 ft</div>
+
+          <!-- SVG pin deck at the very top (beyond 60 ft) -->
+          <div id="pinDeckSvg" class="pin-deck-svg"></div>
+        </div>
+
+        <p class="lane-label">
+          Right-handed lane orientation: 0 = far right, 39 = far left
+        </p>
+      </div>
     </div>
-  </div>
+  </section>
 </main>
 
 <script>
@@ -250,7 +291,7 @@ function ftToY(ft) {
 })();
 
 /* ===========================
-   SVG PIN DECK (USBC GEOMETRY, BOARDS PER YOUR COACHING INFOGRAPHIC)
+   SVG PIN DECK
    =========================== */
 function createPinDeckSvg() {
   const container = document.getElementById("pinDeckSvg");
@@ -272,8 +313,6 @@ function createPinDeckSvg() {
   svg.appendChild(deckRect);
 
   // Pin definitions: board position + vertical row depth (within deck)
-  // Boards from the coaching infographic:
-  // 1:20, 2:25, 3:15, 4:30, 5:20, 6:10, 7:35, 8:25, 9:15, 10:5
   const pins = [
     { num: 1,  board: 20, y: 64 }, // headpin row
     { num: 2,  board: 25, y: 46 },
@@ -302,7 +341,7 @@ function createPinDeckSvg() {
 
     const text = document.createElementNS(svgNS, "text");
     text.setAttribute("x", cx);
-    text.setAttribute("y", cy + 4); // center text vertically
+    text.setAttribute("y", cy + 4);
     text.setAttribute("text-anchor", "middle");
     text.setAttribute("font-size", "10");
     text.setAttribute("fill", "#ffffff");
