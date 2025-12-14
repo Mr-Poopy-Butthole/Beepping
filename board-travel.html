@@ -31,6 +31,14 @@
       margin-top: 0;
     }
 
+    /* === Lane column: lane + label aligned together === */
+
+    .lane-column {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
     /* === Lane Ruler + Layout Overrides === */
 
     .lane-wrapper {
@@ -42,9 +50,10 @@
       text-align: left;
     }
 
+    /* 16 px per foot → 60 ft = 960 px ruler height */
     .ruler {
       width: 40px;
-      height: 720px; /* 60 ft × 12 px (lane only, not pin deck) */
+      height: 960px; /* 60 ft × 16 px (lane only, not pin deck) */
       position: relative;
       background: #0d0d0d;
       border: 1px solid #333;
@@ -108,13 +117,32 @@
       color: #ccc;
     }
 
-    /* Extend lane height to include pin deck (90px) */
+    /* Extend lane height to include pin deck (PIN_DECK_PX = 120) */
 
     .lane {
       position: relative;
       z-index: 1;
-      height: 810px;        /* 60 ft × 12 px (720) + 90 px pin deck */
+      height: 1080px;        /* 60 ft × 16 px (960) + 120 px pin deck */
     }
+
+    /* Override distance line positions for 16 px/ft scale */
+
+    .lane .distance-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: rgba(255, 255, 255, 0.25);
+      font-size: 0.7rem;
+      color: #ccc;
+      text-align: left;
+      padding-left: 4px;
+      transform: translateY(50%);
+    }
+
+    .line-15 { bottom: 240px; }  /* 15 ft × 16 px */
+    .line-30 { bottom: 480px; }  /* 30 ft × 16 px */
+    .line-45 { bottom: 720px; }  /* 45 ft × 16 px */
 
     /* Distance line at 60 ft (front of pin deck) */
     .line-60 {
@@ -128,16 +156,17 @@
       text-align: left;
       padding-left: 4px;
       transform: translateY(50%);
-      bottom: 720px;  /* 60 ft × 12 px from foul line */
+      bottom: 960px;  /* 60 ft × 16 px from foul line */
     }
 
-    /* SVG pin deck container – top 90px of lane */
+    /* SVG pin deck container – top 120px of lane */
+
     .pin-deck-svg {
       position: absolute;
       top: 0;
       left: 0;
       width: 312px;
-      height: 90px;   /* pin-deck depth above 60 ft line */
+      height: 120px;   /* pin-deck depth above 60 ft line */
       pointer-events: none;
     }
 
@@ -148,6 +177,10 @@
 
       .bt-right {
         justify-content: center;
+      }
+
+      .lane-column {
+        align-items: center;
       }
     }
   </style>
@@ -198,34 +231,36 @@
 
   <!-- RIGHT: ruler + lane -->
   <section class="bt-right">
-    <div class="lane-wrapper">
+    <div class="lane-column">
+      <div class="lane-wrapper">
 
-      <!-- LEFT SIDE RULER (0–60 ft only) -->
-      <div class="ruler" id="ruler"></div>
+        <!-- LEFT SIDE RULER (0–60 ft only) -->
+        <div class="ruler" id="ruler"></div>
 
-      <!-- Lane + Straight Line Canvas + Pin Deck -->
-      <div class="lane-container">
-        <canvas id="straightCanvas" width="312" height="810"></canvas>
+        <!-- Lane + Straight Line Canvas + Pin Deck -->
+        <div class="lane-container">
+          <canvas id="straightCanvas" width="312" height="1080"></canvas>
 
-        <div class="lane">
-          <div class="foul-line"></div>
-          <div class="headpin-line"></div>
+          <div class="lane">
+            <div class="foul-line"></div>
+            <div class="headpin-line"></div>
 
-          <!-- Distance lines at 15, 30, 45 ft inside the 0–60 ft section -->
-          <div class="distance-line line-15">15 ft</div>
-          <div class="distance-line line-30">30 ft</div>
-          <div class="distance-line line-45">45 ft</div>
-          <!-- 60 ft line at the front of the pin deck -->
-          <div class="line-60">60 ft</div>
+            <!-- Distance lines at 15, 30, 45 ft inside the 0–60 ft section -->
+            <div class="distance-line line-15">15 ft</div>
+            <div class="distance-line line-30">30 ft</div>
+            <div class="distance-line line-45">45 ft</div>
+            <!-- 60 ft line at the front of the pin deck -->
+            <div class="line-60">60 ft</div>
 
-          <!-- SVG pin deck at the very top (beyond 60 ft) -->
-          <div id="pinDeckSvg" class="pin-deck-svg"></div>
+            <!-- SVG pin deck at the very top (beyond 60 ft) -->
+            <div id="pinDeckSvg" class="pin-deck-svg"></div>
+          </div>
         </div>
-
-        <p class="lane-label">
-          Right-handed lane orientation: 0 = far right, 39 = far left
-        </p>
       </div>
+
+      <p class="lane-label">
+        Right-handed lane orientation: 0 = far right, 39 = far left
+      </p>
     </div>
   </section>
 </main>
@@ -234,7 +269,9 @@
 /* ===========================
    CONSTANTS
    =========================== */
-const LANE_HEIGHT = 810;  // 60 ft (720px) + 90px pin deck
+const FT_PX = 16;          // pixels per foot
+const PIN_DECK_PX = 120;   // height of pin deck
+const LANE_HEIGHT = FT_PX * 60 + PIN_DECK_PX;  // 1080 px
 
 /* ===========================
    HELPER FUNCTIONS
@@ -245,8 +282,8 @@ function boardToX(board) {
 }
 
 function ftToY(ft) {
-  // 0 ft = bottom, 60 ft = 90px from top (LANE_HEIGHT - 60*12)
-  return LANE_HEIGHT - ft * 12;
+  // 0 ft = bottom, 60 ft = LANE_HEIGHT - 60*FT_PX from bottom
+  return LANE_HEIGHT - ft * FT_PX;
 }
 
 /* ===========================
@@ -256,7 +293,7 @@ function ftToY(ft) {
   const ruler = document.getElementById("ruler");
 
   for (let ft = 0; ft <= 60; ft++) {
-    const y = ft * 12;
+    const y = ft * FT_PX;
 
     // 1-ft dots (skip exact ends for a cleaner look)
     if (ft > 0 && ft < 60) {
@@ -300,30 +337,31 @@ function createPinDeckSvg() {
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
   svg.setAttribute("width", "312");
-  svg.setAttribute("height", "90");
-  svg.setAttribute("viewBox", "0 0 312 90");
+  svg.setAttribute("height", String(PIN_DECK_PX));
+  svg.setAttribute("viewBox", "0 0 312 120");
 
   // subtle deck background
   const deckRect = document.createElementNS(svgNS, "rect");
   deckRect.setAttribute("x", "0");
   deckRect.setAttribute("y", "0");
   deckRect.setAttribute("width", "312");
-  deckRect.setAttribute("height", "90");
+  deckRect.setAttribute("height", "120");
   deckRect.setAttribute("fill", "rgba(255,255,255,0.04)");
   svg.appendChild(deckRect);
 
   // Pin definitions: board position + vertical row depth (within deck)
+  // scaled from old [10,28,46,64] in 90px to [~13,37,61,85] in 120px
   const pins = [
-    { num: 1,  board: 20, y: 64 }, // headpin row
-    { num: 2,  board: 25, y: 46 },
-    { num: 3,  board: 15, y: 46 },
-    { num: 4,  board: 30, y: 28 },
-    { num: 5,  board: 20, y: 28 },
-    { num: 6,  board: 10, y: 28 },
-    { num: 7,  board: 35, y: 10 },
-    { num: 8,  board: 25, y: 10 },
-    { num: 9,  board: 15, y: 10 },
-    { num: 10, board: 5,  y: 10 }
+    { num: 1,  board: 20, y: 85 }, // headpin row
+    { num: 2,  board: 25, y: 61 },
+    { num: 3,  board: 15, y: 61 },
+    { num: 4,  board: 30, y: 37 },
+    { num: 5,  board: 20, y: 37 },
+    { num: 6,  board: 10, y: 37 },
+    { num: 7,  board: 35, y: 13 },
+    { num: 8,  board: 25, y: 13 },
+    { num: 9,  board: 15, y: 13 },
+    { num: 10, board: 5,  y: 13 }
   ];
 
   pins.forEach(pin => {
