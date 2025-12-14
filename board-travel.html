@@ -20,7 +20,7 @@
 
     .ruler {
       width: 40px;
-      height: 720px; /* 60 ft × 12 px */
+      height: 720px; /* 60 ft × 12 px (lane only, not pin deck) */
       position: relative;
       background: #0d0d0d;
       border: 1px solid #333;
@@ -32,7 +32,7 @@
     .tick-minor {
       position: absolute;
       left: 4px;
-      transform: translateY(50%);  /* match .distance-line behavior */
+      transform: translateY(50%);
     }
 
     .tick-major {
@@ -64,12 +64,12 @@
       background: #666;
     }
 
-    /* Straight line canvas sits over the lane */
+    /* Straight line canvas sits over the lane (0–60 ft) + pin deck */
     #straightCanvas {
       position: absolute;
       inset: 0;
       pointer-events: none;
-      z-index: 2;      /* <<< draw on top of lane */
+      z-index: 2;      /* draw on top of lane */
     }
 
     .lane-container {
@@ -84,60 +84,37 @@
       color: #ccc;
     }
 
-    /* Ensure lane is under the canvas */
+    /* Extend lane height to include pin deck (90px) */
     .lane {
       position: relative;
       z-index: 1;
+      height: 810px;        /* 60 ft × 12 px (720) + 90 px pin deck */
     }
 
-    /* === Pin deck & pin positions (override defaults) === */
+    /* Distance line at 60 ft (front of pin deck) */
+    .line-60 {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: rgba(255, 255, 255, 0.25);
+      font-size: 0.7rem;
+      color: #ccc;
+      text-align: left;
+      padding-left: 4px;
+      transform: translateY(50%);
+      bottom: 720px;  /* 60 ft × 12 px from foul line */
+    }
 
-    .lane .pin-deck {
+    /* SVG pin deck container – top 90px of lane */
+    .pin-deck-svg {
       position: absolute;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 90px;        /* ~7.5 ft of pin deck area */
-      display: block;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.25);
-      background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.08),
-        transparent
-      );
+      width: 312px;
+      height: 90px;   /* pin-deck depth above 60 ft line */
       pointer-events: none;
     }
-
-    .lane .pin {
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 1px solid #fff;
-      color: #fff;
-      font-size: 0.6rem;
-      line-height: 20px;
-      text-align: center;
-      background-color: #333;
-    }
-
-    /* Back row (7–10) – closest to 60ft line */
-    .lane .pin-7  { top: 10px; left: calc(50% - 36px); transform: translateX(-50%); }
-    .lane .pin-8  { top: 10px; left: calc(50% - 12px); transform: translateX(-50%); }
-    .lane .pin-9  { top: 10px; left: calc(50% + 12px); transform: translateX(-50%); }
-    .lane .pin-10 { top: 10px; left: calc(50% + 36px); transform: translateX(-50%); }
-
-    /* Next row (4–6) */
-    .lane .pin-4  { top: 28px; left: calc(50% - 24px); transform: translateX(-50%); }
-    .lane .pin-5  { top: 28px; left: 50%;              transform: translateX(-50%); }
-    .lane .pin-6  { top: 28px; left: calc(50% + 24px); transform: translateX(-50%); }
-
-    /* Next row (2–3) */
-    .lane .pin-2  { top: 46px; left: calc(50% - 12px); transform: translateX(-50%); }
-    .lane .pin-3  { top: 46px; left: calc(50% + 12px); transform: translateX(-50%); }
-
-    /* Headpin (1) */
-    .lane .pin-1  { top: 64px; left: 50%;              transform: translateX(-50%); }
   </style>
 </head>
 
@@ -183,38 +160,26 @@
 
   <div class="lane-wrapper">
 
-    <!-- LEFT SIDE RULER -->
+    <!-- LEFT SIDE RULER (0–60 ft only) -->
     <div class="ruler" id="ruler"></div>
 
-    <!-- Lane + Straight Line Canvas -->
+    <!-- Lane + Straight Line Canvas + Pin Deck -->
     <div class="lane-container">
-      <canvas id="straightCanvas" width="312" height="720"></canvas>
+      <canvas id="straightCanvas" width="312" height="810"></canvas>
 
       <div class="lane">
         <div class="foul-line"></div>
         <div class="headpin-line"></div>
 
-        <!-- Distance lines at 15, 30, 45 ft -->
+        <!-- Distance lines at 15, 30, 45 ft inside the 0–60 ft section -->
         <div class="distance-line line-15">15 ft</div>
         <div class="distance-line line-30">30 ft</div>
         <div class="distance-line line-45">45 ft</div>
+        <!-- 60 ft line at the front of the pin deck -->
+        <div class="line-60">60 ft</div>
 
-        <!-- Pin deck and pins 1–10 -->
-        <div class="pin-deck">
-          <div class="pin pin-7">7</div>
-          <div class="pin pin-8">8</div>
-          <div class="pin pin-9">9</div>
-          <div class="pin pin-10">10</div>
-
-          <div class="pin pin-4">4</div>
-          <div class="pin pin-5">5</div>
-          <div class="pin pin-6">6</div>
-
-          <div class="pin pin-2">2</div>
-          <div class="pin pin-3">3</div>
-
-          <div class="pin pin-1">1</div>
-        </div>
+        <!-- SVG pin deck at the very top (beyond 60 ft) -->
+        <div id="pinDeckSvg" class="pin-deck-svg"></div>
       </div>
 
       <p class="lane-label">
@@ -226,6 +191,11 @@
 
 <script>
 /* ===========================
+   CONSTANTS
+   =========================== */
+const LANE_HEIGHT = 810;  // 60 ft (720px) + 90px pin deck
+
+/* ===========================
    HELPER FUNCTIONS
    =========================== */
 function boardToX(board) {
@@ -234,12 +204,12 @@ function boardToX(board) {
 }
 
 function ftToY(ft) {
-  // Lane & canvas are 720px tall; 0 ft = bottom, 60 ft = top
-  return 720 - ft * 12;
+  // 0 ft = bottom, 60 ft = 90px from top (LANE_HEIGHT - 60*12)
+  return LANE_HEIGHT - ft * 12;
 }
 
 /* ===========================
-   BUILD RULER
+   BUILD RULER (0–60 ft)
    =========================== */
 (function buildRuler() {
   const ruler = document.getElementById("ruler");
@@ -278,6 +248,73 @@ function ftToY(ft) {
     }
   }
 })();
+
+/* ===========================
+   SVG PIN DECK (USBC GEOMETRY, BOARDS PER YOUR COACHING INFOGRAPHIC)
+   =========================== */
+function createPinDeckSvg() {
+  const container = document.getElementById("pinDeckSvg");
+  if (!container) return;
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", "312");
+  svg.setAttribute("height", "90");
+  svg.setAttribute("viewBox", "0 0 312 90");
+
+  // subtle deck background
+  const deckRect = document.createElementNS(svgNS, "rect");
+  deckRect.setAttribute("x", "0");
+  deckRect.setAttribute("y", "0");
+  deckRect.setAttribute("width", "312");
+  deckRect.setAttribute("height", "90");
+  deckRect.setAttribute("fill", "rgba(255,255,255,0.04)");
+  svg.appendChild(deckRect);
+
+  // Pin definitions: board position + vertical row depth (within deck)
+  // Boards from the coaching infographic:
+  // 1:20, 2:25, 3:15, 4:30, 5:20, 6:10, 7:35, 8:25, 9:15, 10:5
+  const pins = [
+    { num: 1,  board: 20, y: 64 }, // headpin row
+    { num: 2,  board: 25, y: 46 },
+    { num: 3,  board: 15, y: 46 },
+    { num: 4,  board: 30, y: 28 },
+    { num: 5,  board: 20, y: 28 },
+    { num: 6,  board: 10, y: 28 },
+    { num: 7,  board: 35, y: 10 },
+    { num: 8,  board: 25, y: 10 },
+    { num: 9,  board: 15, y: 10 },
+    { num: 10, board: 5,  y: 10 }
+  ];
+
+  pins.forEach(pin => {
+    const cx = boardToX(pin.board);
+    const cy = pin.y;
+
+    const circle = document.createElementNS(svgNS, "circle");
+    circle.setAttribute("cx", cx);
+    circle.setAttribute("cy", cy);
+    circle.setAttribute("r", "10");
+    circle.setAttribute("stroke", "#ffffff");
+    circle.setAttribute("stroke-width", "1");
+    circle.setAttribute("fill", "#333333");
+    svg.appendChild(circle);
+
+    const text = document.createElementNS(svgNS, "text");
+    text.setAttribute("x", cx);
+    text.setAttribute("y", cy + 4); // center text vertically
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("font-size", "10");
+    text.setAttribute("fill", "#ffffff");
+    text.textContent = pin.num.toString();
+    svg.appendChild(text);
+  });
+
+  container.appendChild(svg);
+}
+
+// build the SVG deck on load
+createPinDeckSvg();
 
 /* ===========================
    STRAIGHT LINE CALCULATION
@@ -327,11 +364,12 @@ document.getElementById("travelForm").addEventListener("submit", function(e) {
   const canvas = document.getElementById("straightCanvas");
   const ctx = canvas.getContext("2d");
 
-  ctx.clearRect(0, 0, 312, 720);
+  ctx.clearRect(0, 0, 312, LANE_HEIGHT);
 
   const x0 = boardToX(R);
   const y0 = ftToY(0);
 
+  // Stop line at 60 ft (front of pin deck)
   const xf = boardToX(board60);
   const yf = ftToY(60);
 
