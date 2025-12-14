@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Physics-Based Bowling Line Explorer</title>
+  <title>Physics-Based Bowling Line Explorer v1.0</title>
   <style>
     :root {
       --bg: #0b0b10;
@@ -466,7 +466,6 @@
 
           <!-- Arrows at ~15 ft (7-arrow fan) -->
           <g id="arrowsGroup" fill="#d5c1a1" stroke="#8a6b44" stroke-width="0.7" opacity="0.9">
-            <!-- coordinates tuned by eye for V-shape across lane -->
             <polygon points="82,520 86,509 90,520" />
             <polygon points="96,520 100,509 104,520" />
             <polygon points="110,520 114,509 118,520" />
@@ -523,8 +522,12 @@
             <div id="entryAngleOut" class="summary-item-value">–</div>
           </div>
           <div>
-            <div class="summary-item-title">Breakpoint board @ 43 ft</div>
+            <div class="summary-item-title">Board @ 43 FT</div>
             <div id="breakBoardOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Breakpoint board (sim)</div>
+            <div id="trueBreakOut" class="summary-item-value">–</div>
           </div>
           <div>
             <div class="summary-item-title">Sliding distance</div>
@@ -588,7 +591,8 @@
     const laneLengthM = laneLengthFtTotal * FT_TO_M;
     const ENTRY_Y = ENTRY_DISTANCE_FT * FT_TO_M;
 
-    const BREAKPOINT_DIST_FT = 43;             // match StrikeTrack-style readout
+    // Fixed 43-ft sample for Baker Box context
+    const BREAKPOINT_DIST_FT = 43;
     const BREAKPOINT_Y = BREAKPOINT_DIST_FT * FT_TO_M;
 
     const laneWidthM = 1.0668;
@@ -614,6 +618,7 @@
     const entryBoardOut = document.getElementById('entryBoardOut');
     const entryAngleOut = document.getElementById('entryAngleOut');
     const breakBoardOut = document.getElementById('breakBoardOut');
+    const trueBreakOut = document.getElementById('trueBreakOut');
     const slidingDistOut = document.getElementById('slidingDistOut');
     const rollingDistOut = document.getElementById('rollingDistOut');
     const pocketOut = document.getElementById('pocketOut');
@@ -859,6 +864,21 @@
       return null;
     }
 
+    // "True" breakpoint = farthest right point between 30–55 ft (right-hander)
+    function findBreakpointPoint(allPoints) {
+      if (!allPoints || allPoints.length === 0) return null;
+      const minYM = 30 * FT_TO_M;
+      const maxYM = 55 * FT_TO_M;
+      let best = null;
+      for (let i = 0; i < allPoints.length; i++) {
+        const p = allPoints[i];
+        if (p.y < minYM || p.y > maxYM) continue;
+        // right gutter is positive x in this model
+        if (!best || p.x > best.x) best = p;
+      }
+      return best;
+    }
+
     function simulateShot(params) {
       const {
         startBoard,
@@ -1056,14 +1076,24 @@
           pocketOut.textContent = '–';
       }
 
-      // Breakpoint board at 43 ft
-      const breakPoint = findPointAtY(allCentral, BREAKPOINT_Y);
-      if (breakPoint) {
-        const idxFromCenter = breakPoint.x / boardWidthM;
+      // Board @ 43 ft (for Baker Box comparison)
+      const breakPoint43 = findPointAtY(allCentral, BREAKPOINT_Y);
+      if (breakPoint43) {
+        const idxFromCenter = breakPoint43.x / boardWidthM;
         const boardFromRightBreak = 20 - idxFromCenter;
         breakBoardOut.textContent = boardFromRightBreak.toFixed(1) + ' board';
       } else {
         breakBoardOut.textContent = '–';
+      }
+
+      // "True" breakpoint board (simulated farthest right between 30–55 ft)
+      const trueBP = findBreakpointPoint(allCentral);
+      if (trueBP) {
+        const idxFromCenter = trueBP.x / boardWidthM;
+        const boardFromRightTrue = 20 - idxFromCenter;
+        trueBreakOut.textContent = boardFromRightTrue.toFixed(1) + ' board';
+      } else {
+        trueBreakOut.textContent = '–';
       }
 
       // Exit board
