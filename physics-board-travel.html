@@ -213,11 +213,9 @@
       border-color: rgba(81,223,255,0.9);
     }
 
-    /* Right side */
-
     .visuals-panel {
       display: grid;
-      grid-template-rows: minmax(480px, 80vh) auto;
+      grid-template-rows: minmax(520px, 82vh) auto;
       gap: 10px;
     }
 
@@ -231,7 +229,7 @@
       align-items: center;
       justify-content: center;
       height: 100%;
-      min-height: 480px;
+      min-height: 520px;
     }
 
     .lane-header {
@@ -311,7 +309,7 @@
   </div>
 
   <div class="container">
-    <!-- LEFT -->
+    <!-- LEFT: INPUTS -->
     <div class="panel">
       <div class="panel-header">
         <h2>Inputs</h2>
@@ -417,7 +415,7 @@
       </div>
 
       <div class="chip-row">
-        <span class="chip">60 ft to headpin, 3 ft pin deck</span>
+        <span class="chip">60 ft to headpin, ~6 ft deck</span>
         <span class="chip">Sliding → rolling rigid body</span>
         <span class="chip">Strike probability via Monte Carlo</span>
       </div>
@@ -429,11 +427,11 @@
       </div>
     </div>
 
-    <!-- RIGHT -->
+    <!-- RIGHT: LANE + OUTPUT -->
     <div class="panel visuals-panel">
       <div class="lane-wrapper">
         <div class="lane-header">
-          Downlane view (left = foul line, right = back of pin deck). Central line = ideal shot; colored cone = miss window.
+          Downlane view (left = foul line, right = back of pin deck). Central line = ideal shot; colored cone = miss window. Teal box = Baker Box.
         </div>
         <svg id="laneSvg" viewBox="0 0 260 720" preserveAspectRatio="xMidYMid meet">
           <defs>
@@ -478,7 +476,7 @@
             <circle cx="170" cy="705" r="1.6" fill="#333" />
           </g>
 
-          <!-- Arrows around 15 ft -->
+          <!-- Arrows at ~15 ft -->
           <g fill="#b37436" opacity="0.85">
             <polygon points="95,520 100,510 105,520" />
             <polygon points="115,520 120,510 125,520" />
@@ -486,14 +484,19 @@
             <polygon points="155,520 160,510 165,520" />
           </g>
 
-          <!-- Oil pattern marker -->
+          <!-- Oil zone (filled via JS) -->
           <rect id="oilZone" x="30" y="120" width="200" height="0"
                 fill="rgba(0,120,255,0.16)" stroke="rgba(0,120,255,0.35)" stroke-width="1" />
 
-          <!-- Pin deck region (last ~3 ft) -->
+          <!-- Baker Box (Mark Baker: boards 5–8, 42–46 ft) -->
+          <rect id="bakerBox" x="0" y="0" width="0" height="0"
+                fill="rgba(0,255,255,0.15)" stroke="rgba(0,255,255,0.8)"
+                stroke-width="1.2" stroke-dasharray="4 3" />
+
+          <!-- Pin deck region (visual) -->
           <rect id="pinDeckRect" x="30" y="20" width="200" height="34" fill="#f0e6d5" opacity="0.95" stroke="#ccb9a4" stroke-width="1.5" />
 
-          <!-- Pins group (10 pins) -->
+          <!-- Pins -->
           <g id="pinsGroup"></g>
 
           <!-- Ruler -->
@@ -501,7 +504,7 @@
             <rect x="5" y="20" width="20" height="680" fill="#06070c" stroke="#555" stroke-width="1" />
           </g>
 
-          <!-- Monte Carlo cone -->
+          <!-- Miss cone -->
           <g id="coneGroup"></g>
 
           <!-- Central path -->
@@ -584,7 +587,7 @@
     const MPH_TO_MPS = 0.44704;
 
     const ENTRY_DISTANCE_FT = 60;
-    const PIN_DECK_LENGTH_FT = 3; // approximate
+    const PIN_DECK_LENGTH_FT = 6;          // extend visual deck to 6 ft behind headpin
     const laneLengthFtTotal = ENTRY_DISTANCE_FT + PIN_DECK_LENGTH_FT;
     const laneLengthM = laneLengthFtTotal * FT_TO_M;
     const ENTRY_Y = ENTRY_DISTANCE_FT * FT_TO_M;
@@ -604,6 +607,7 @@
     const pathRolling = document.getElementById('pathRolling');
     const ballMarker = document.getElementById('ballMarker');
     const oilZone = document.getElementById('oilZone');
+    const bakerBoxRect = document.getElementById('bakerBox');
     const rulerGroup = document.getElementById('ruler');
     const coneGroup = document.getElementById('coneGroup');
     const pinsGroup = document.getElementById('pinsGroup');
@@ -643,7 +647,6 @@
     const consistencyButtons = document.querySelectorAll('.consistency-btn');
 
     let activeProfile = 'tight';
-    const profileMissRange = { tight: 1, league: 3, wild: 10 };
 
     function syncDisplay() {
       launchAngleVal.textContent = parseFloat(launchAngleEl.value).toFixed(1);
@@ -712,16 +715,16 @@
       const rowSpacing = 12 * IN_TO_M;
 
       const pins = [
-        { n: 1, x: 0, y: headY },
-        { n: 2, x: -6 * IN_TO_M, y: headY + rowSpacing },
-        { n: 3, x:  6 * IN_TO_M, y: headY + rowSpacing },
-        { n: 4, x: -12 * IN_TO_M, y: headY + 2 * rowSpacing },
-        { n: 5, x: 0, y: headY + 2 * rowSpacing },
-        { n: 6, x:  12 * IN_TO_M, y: headY + 2 * rowSpacing },
-        { n: 7, x: -18 * IN_TO_M, y: headY + 3 * rowSpacing },
-        { n: 8, x: -6 * IN_TO_M, y: headY + 3 * rowSpacing },
-        { n: 9, x:  6 * IN_TO_M, y: headY + 3 * rowSpacing },
-        { n:10, x: 18 * IN_TO_M, y: headY + 3 * rowSpacing }
+        { x: 0, y: headY },
+        { x: -6 * IN_TO_M, y: headY + rowSpacing },
+        { x:  6 * IN_TO_M, y: headY + rowSpacing },
+        { x: -12 * IN_TO_M, y: headY + 2 * rowSpacing },
+        { x: 0, y: headY + 2 * rowSpacing },
+        { x:  12 * IN_TO_M, y: headY + 2 * rowSpacing },
+        { x: -18 * IN_TO_M, y: headY + 3 * rowSpacing },
+        { x: -6 * IN_TO_M, y: headY + 3 * rowSpacing },
+        { x:  6 * IN_TO_M, y: headY + 3 * rowSpacing },
+        { x: 18 * IN_TO_M, y: headY + 3 * rowSpacing }
       ];
 
       pins.forEach(pin => {
@@ -737,13 +740,42 @@
       });
     }
 
+    function drawBakerBox() {
+      // Baker Box: boards 5–8, 42–46 ft
+      const boardFromRightLeft = 5;
+      const boardFromRightRight = 8;
+      const yStartFt = 42;
+      const yEndFt = 46;
+
+      const idxLeft = 20 - boardFromRightLeft;
+      const idxRight = 20 - boardFromRightRight;
+      const xLeft = idxLeft * boardWidthM;
+      const xRight = idxRight * boardWidthM;
+
+      const { x: xLeftPx } = worldToSvg(xLeft, 0);
+      const { x: xRightPx } = worldToSvg(xRight, 0);
+
+      const { y: yStartPx } = worldToSvg(0, yStartFt * FT_TO_M);
+      const { y: yEndPx } = worldToSvg(0, yEndFt * FT_TO_M);
+
+      const xBox = Math.min(xLeftPx, xRightPx);
+      const wBox = Math.abs(xRightPx - xLeftPx);
+      const yBox = Math.min(yStartPx, yEndPx);
+      const hBox = Math.abs(yEndPx - yStartPx);
+
+      bakerBoxRect.setAttribute('x', xBox);
+      bakerBoxRect.setAttribute('y', yBox);
+      bakerBoxRect.setAttribute('width', wBox);
+      bakerBoxRect.setAttribute('height', hBox);
+    }
+
     drawRuler();
     drawPins();
+    drawBakerBox();
 
     function updateOilZoneVisual(oilLengthFt) {
       const oilLengthM = oilLengthFt * FT_TO_M;
-      const yOilEnd = oilLengthM;
-      const { y: yPxEnd } = worldToSvg(0, yOilEnd);
+      const { y: yPxEnd } = worldToSvg(0, oilLengthM);
       const { y: yPxStart } = worldToSvg(0, 0);
       const height = yPxStart - yPxEnd;
       oilZone.setAttribute('y', yPxEnd);
@@ -840,7 +872,7 @@
 
       const oilLengthM = oilLengthFt * FT_TO_M;
       const dt = 0.004;
-      const maxTime = 4.2;
+      const maxTime = 4.5;
       const maxSteps = Math.ceil(maxTime / dt);
 
       const pointsSliding = [];
@@ -868,10 +900,8 @@
           } else {
             const Fx = -mu * ballMassKg * g * (vRelX / (Math.abs(vRelX) + 1e-6));
             const Fy = -mu * ballMassKg * g * (vRelY / (Math.abs(vRelY) + 1e-6));
-            const ax = Fx / ballMassKg;
-            const ay = Fy / ballMassKg;
-            vx += ax * dt;
-            vy += ay * dt;
+            vx += (Fx / ballMassKg) * dt;
+            vy += (Fy / ballMassKg) * dt;
             const alphaSide = -(Fx * ballRadiusM) / ballI;
             const alphaRoll = -(Fy * ballRadiusM) / ballI;
             omegaSide += alphaSide * dt;
@@ -914,7 +944,7 @@
       const goodAngle = angleAbs >= 3.0 && angleAbs <= 6.5;
 
       const xExit = exitPoint.x;
-      const goodExit = Math.abs(xExit) <= 6 * IN_TO_M; // between 8 & 9 pin centers
+      const goodExit = Math.abs(xExit) <= 6 * IN_TO_M; // roughly exits between 8 and 9
 
       return inPocketWindow && goodAngle && goodExit;
     }
@@ -1103,6 +1133,7 @@
       });
     });
 
+    // initial render
     resetToJiShot();
   </script>
 </body>
