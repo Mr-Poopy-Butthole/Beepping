@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Physics-Based Bowling Line Explorer</title>
+  <style>
+    :root {
+      --bg: #0b0b10;
+      --panel: #181825;
+      --accent: #51dfff;
+      --accent-soft: rgba(81, 223, 255, 0.2);
+      --text-main: #f5f5f5;
+      --text-muted: #a5a5c0;
+      --danger: #ff6b6b;
+      --success: #6bffb0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: radial-gradient(circle at top, #1b1b2f 0%, #050509 45%, #000 100%);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.7rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .subtitle {
+      margin-bottom: 16px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(520px, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.6));
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        0 18px 40px rgba(0,0,0,0.7),
+        0 0 0 1px rgba(255,255,255,0.03);
+      padding: 14px 16px 16px;
+      backdrop-filter: blur(14px);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .panel-header h2 {
+      font-size: 1rem;
+      margin: 0;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      color: var(--accent);
+      background: radial-gradient(circle at top, rgba(81,223,255,0.25), transparent 55%);
+    }
+
+    .section-label {
+      margin: 10px 0 4px;
+      font-size: 0.77rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+    }
+
+    .field-group {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 8px 10px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .field-group label {
+      font-size: 0.82rem;
+      color: var(--text-main);
+    }
+
+    .field-inline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    input[type="number"],
+    input[type="range"],
+    select {
+      width: 100%;
+      font-size: 0.82rem;
+      padding: 4px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.6);
+      color: var(--text-main);
+      outline: none;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      background: transparent;
+    }
+
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(81,223,255,0.3);
+    }
+
+    .suffix {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 2.2rem;
+      text-align: right;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: radial-gradient(circle at top, rgba(81,223,255,0.3), rgba(10,10,20,0.9));
+      color: var(--text-main);
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+    }
+
+    button.secondary {
+      background: rgba(10,10,25,0.9);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text-muted);
+    }
+
+    /* Right side: lane + summary */
+
+    .visuals-panel {
+      display: grid;
+      grid-template-rows: minmax(360px, 480px) auto;
+      gap: 10px;
+    }
+
+    .lane-wrapper {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #2c3e50 0%, #111827 40%, #020308 100%);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .lane-header {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      z-index: 2;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: rgba(0,0,0,0.4);
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    svg#laneSvg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .summary {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 6px 14px;
+    }
+
+    .summary-item-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .summary-item-value {
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    .summary-item-value.ok {
+      color: var(--success);
+    }
+
+    .summary-item-value.bad {
+      color: var(--danger);
+    }
+
+    .note {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Physics-Based Bowling Line Explorer</h1>
+  <div class="subtitle">
+    Merges your board-travel lane view with a simplified version of Ji et al.’s rigid-body bowling model
+    (sliding → rolling) so you can see how different releases translate into entry angle and board.
+  </div>
+
+  <div class="container">
+    <!-- LEFT: INPUTS -->
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Inputs</h2>
+        <span class="tag">Release · Ball · Lane</span>
+      </div>
+
+      <!-- Release Parameters -->
+      <div class="section-label">Release window</div>
+
+      <div class="field-group">
+        <label for="startBoard">Start board (from right gutter)</label>
+        <div class="field-inline">
+          <input id="startBoard" type="number" min="1" max="39" step="0.1" value="28">
+          <span class="suffix">board</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="launchAngle">Launch angle (toward right)</label>
+        <div class="field-inline">
+          <input id="launchAngle" type="range" min="0" max="6" step="0.1" value="1.8">
+          <span class="suffix"><span id="launchAngleVal">1.8</span>°</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="ballSpeed">Ball speed at release</label>
+        <div class="field-inline">
+          <input id="ballSpeed" type="range" min="12" max="22" step="0.1" value="17.9">
+          <span class="suffix"><span id="ballSpeedVal">17.9</span> mph</span>
+        </div>
+      </div>
+
+      <!-- Ball Parameters -->
+      <div class="section-label">Ball & rotation</div>
+
+      <div class="field-group">
+        <label for="revRate">Rev rate</label>
+        <div class="field-inline">
+          <input id="revRate" type="range" min="200" max="600" step="10" value="416">
+          <span class="suffix"><span id="revRateVal">416</span> rpm</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="axisRot">Axis rotation</label>
+        <div class="field-inline">
+          <input id="axisRot" type="range" min="0" max="90" step="1" value="45">
+          <span class="suffix"><span id="axisRotVal">45</span>°</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="axisTilt">Axis tilt</label>
+        <div class="field-inline">
+          <input id="axisTilt" type="range" min="0" max="30" step="1" value="15">
+          <span class="suffix"><span id="axisTiltVal">15</span>°</span>
+        </div>
+      </div>
+
+      <!-- Lane / Oil Pattern -->
+      <div class="section-label">Lane pattern & friction</div>
+
+      <div class="field-group">
+        <label for="oilLength">Oil length</label>
+        <div class="field-inline">
+          <input id="oilLength" type="range" min="30" max="47" step="1" value="35">
+          <span class="suffix"><span id="oilLengthVal">35</span> ft</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="muOil">μ in oil</label>
+        <div class="field-inline">
+          <input id="muOil" type="number" min="0.01" max="0.15" step="0.005" value="0.04">
+          <span class="suffix">μ</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="muDry">μ on dry</label>
+        <div class="field-inline">
+          <input id="muDry" type="number" min="0.05" max="0.3" step="0.01" value="0.18">
+          <span class="suffix">μ</span>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button id="runBtn">Run simulation</button>
+        <button id="resetBtn" class="secondary">Reset to Ji shot</button>
+      </div>
+
+      <div class="chip-row">
+        <span class="chip">60 ft lane, 39 boards</span>
+        <span class="chip">Phases: sliding → rolling</span>
+        <span class="chip">Right-handed pocket model</span>
+      </div>
+
+      <div class="note">
+        * This is a simplified rigid-body model: it respects sliding vs. rolling and friction
+        zones but ignores CG offset, lane topography, and oil breakdown (all mentioned as
+        “future work” in Ji et al.).
+      </div>
+    </div>
+
+    <!-- RIGHT: LANE + SUMMARY -->
+    <div class="panel visuals-panel">
+      <div class="lane-wrapper">
+        <div class="lane-header">
+          Downlane view (top = pins, bottom = foul line)
+        </div>
+        <svg id="laneSvg" viewBox="0 0 260 720" preserveAspectRatio="xMidYMid meet">
+          <!-- Lane background & boards -->
+          <defs>
+            <linearGradient id="laneWood" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#e1c7a5"></stop>
+              <stop offset="100%" stop-color="#c1996b"></stop>
+            </linearGradient>
+          </defs>
+
+          <!-- Lane base -->
+          <rect x="50" y="20" width="160" height="680" fill="url(#laneWood)" opacity="0.95" stroke="#b88b57" stroke-width="1" />
+
+          <!-- Boards (39) -->
+          <g id="boards">
+            <!-- Drawn by JS for more precise spacing if desired; fallback lines: -->
+            <!-- simple visual stripes -->
+            <script type="application/ecmascript"><![CDATA[
+              // This embedded script is just a visual fallback in case JS outside doesn’t run.
+              (function() {
+                var svg = document.currentScript.ownerSVGElement;
+                var group = svg.getElementById('boards');
+                if (!group) return;
+                var laneX = 50, laneW = 160;
+                var boardW = laneW / 39;
+                for (var i = 1; i < 39; i++) {
+                  var x = laneX + i * boardW;
+                  var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                  line.setAttribute("x1", x);
+                  line.setAttribute("y1", 20);
+                  line.setAttribute("x2", x);
+                  line.setAttribute("y2", 700);
+                  line.setAttribute("stroke", "rgba(0,0,0,0.12)");
+                  line.setAttribute("stroke-width", i % 5 === 0 ? 0.8 : 0.3);
+                  group.appendChild(line);
+                }
+              })();
+            ]]></script>
+          </g>
+
+          <!-- Foul line -->
+          <line x1="50" y1="700" x2="210" y2="700" stroke="#333" stroke-width="2" />
+          <!-- Approach dots at foul line -->
+          <g stroke="#444" stroke-width="2">
+            <circle cx="90" cy="705" r="1.6" fill="#333" />
+            <circle cx="130" cy="705" r="1.6" fill="#333" />
+            <circle cx="170" cy="705" r="1.6" fill="#333" />
+          </g>
+
+          <!-- Arrows at ~15 ft -->
+          <g fill="#b37436" opacity="0.85">
+            <!-- placed roughly every 5 boards -->
+            <polygon points="95,520 100,510 105,520" />
+            <polygon points="115,520 120,510 125,520" />
+            <polygon points="135,520 140,510 145,520" />
+            <polygon points="155,520 160,510 165,520" />
+          </g>
+
+          <!-- Oil pattern marker -->
+          <rect id="oilZone" x="50" y="120" width="160" height="0"
+                fill="rgba(0,120,255,0.16)" stroke="rgba(0,120,255,0.35)"
+                stroke-width="1" />
+
+          <!-- Pin deck region (last ~3 ft) -->
+          <rect x="50" y="20" width="160" height="36" fill="#f0e6d5" opacity="0.95" stroke="#ccb9a4" stroke-width="1.5" />
+
+          <!-- Headpin (just a marker for now) -->
+          <circle cx="130" cy="34" r="4" fill="#ffffff" stroke="#cc0000" stroke-width="1.5" />
+
+          <!-- Ruler on the left (ft marks) -->
+          <g id="ruler">
+            <rect x="20" y="20" width="20" height="680" fill="#06070c" stroke="#555" stroke-width="1" />
+          </g>
+
+          <!-- Ball path segments -->
+          <path id="pathSliding" d="" fill="none" stroke="#ffe45e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          <path id="pathRolling" d="" fill="none" stroke="#61f7a8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+
+          <!-- Ball marker -->
+          <circle id="ballMarker" cx="-100" cy="-100" r="6" fill="#4bd3ff" stroke="#ffffff" stroke-width="1.5" />
+        </svg>
+      </div>
+
+      <div>
+        <div class="panel-header">
+          <h2>Ball motion summary</h2>
+          <span class="tag">Output · Pocket view</span>
+        </div>
+        <div class="summary">
+          <div>
+            <div class="summary-item-title">Entry board (from right)</div>
+            <div id="entryBoardOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Entry angle</div>
+            <div id="entryAngleOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Sliding distance</div>
+            <div id="slidingDistOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Rolling distance</div>
+            <div id="rollingDistOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Pocket window</div>
+            <div id="pocketOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Hit / Gutter</div>
+            <div id="gutterOut" class="summary-item-value">–</div>
+          </div>
+        </div>
+        <div class="note">
+          Pocket is assumed 0.5–5.5 in from lane center at 60 ft (Ji et al. using USBC strike-window data).
+          Entry angle between ~3–6° is usually ideal for strikes.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Constants matching USBC lane dimensions & Ji et al. param ranges ---
+    const FT_TO_M = 0.3048;
+    const MPH_TO_MPS = 0.44704;
+
+    const laneLengthFt = 60;
+    const laneLengthM = laneLengthFt * FT_TO_M;
+    const laneWidthM = 1.0668;     // ~41.5 in
+    const halfLaneWidthM = laneWidthM / 2;
+    const numBoards = 39;
+    const boardWidthM = laneWidthM / numBoards;
+    const g = 9.81;
+
+    const ballMassKg = 6.8;        // typical 15 lb ball
+    const ballRadiusM = 0.1085;    // 8.5 in diameter => ~0.1085 m radius
+    const ballI = 0.4 * ballMassKg * ballRadiusM * ballRadiusM; // solid sphere approx
+
+    const svg = document.getElementById('laneSvg');
+    const pathSliding = document.getElementById('pathSliding');
+    const pathRolling = document.getElementById('pathRolling');
+    const ballMarker = document.getElementById('ballMarker');
+    const oilZone = document.getElementById('oilZone');
+    const rulerGroup = document.getElementById('ruler');
+
+    const entryBoardOut = document.getElementById('entryBoardOut');
+    const entryAngleOut = document.getElementById('entryAngleOut');
+    const slidingDistOut = document.getElementById('slidingDistOut');
+    const rollingDistOut = document.getElementById('rollingDistOut');
+    const pocketOut = document.getElementById('pocketOut');
+    const gutterOut = document.getElementById('gutterOut');
+
+    // Input elements
+    const startBoardEl = document.getElementById('startBoard');
+    const launchAngleEl = document.getElementById('launchAngle');
+    const launchAngleVal = document.getElementById('launchAngleVal');
+    const ballSpeedEl = document.getElementById('ballSpeed');
+    const ballSpeedVal = document.getElementById('ballSpeedVal');
+    const revRateEl = document.getElementById('revRate');
+    const revRateVal = document.getElementById('revRateVal');
+    const axisRotEl = document.getElementById('axisRot');
+    const axisRotVal = document.getElementById('axisRotVal');
+    const axisTiltEl = document.getElementById('axisTilt');
+    const axisTiltVal = document.getElementById('axisTiltVal');
+    const oilLengthEl = document.getElementById('oilLength');
+    const oilLengthVal = document.getElementById('oilLengthVal');
+    const muOilEl = document.getElementById('muOil');
+    const muDryEl = document.getElementById('muDry');
+
+    const runBtn = document.getElementById('runBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Sync slider labels
+    function syncDisplay() {
+      launchAngleVal.textContent = parseFloat(launchAngleEl.value).toFixed(1);
+      ballSpeedVal.textContent = parseFloat(ballSpeedEl.value).toFixed(1);
+      revRateVal.textContent = parseInt(revRateEl.value, 10);
+      axisRotVal.textContent = parseInt(axisRotEl.value, 10);
+      axisTiltVal.textContent = parseInt(axisTiltEl.value, 10);
+      oilLengthVal.textContent = parseInt(oilLengthEl.value, 10);
+    }
+
+    launchAngleEl.addEventListener('input', syncDisplay);
+    ballSpeedEl.addEventListener('input', syncDisplay);
+    revRateEl.addEventListener('input', syncDisplay);
+    axisRotEl.addEventListener('input', syncDisplay);
+    axisTiltEl.addEventListener('input', syncDisplay);
+    oilLengthEl.addEventListener('input', syncDisplay);
+
+    // Coordinate transforms: world (m) -> SVG (px)
+    function worldToSvg(xMeters, yMeters) {
+      // In SVG: lane rectangle is from x=50 to x=210, y=20 (pins) to y=700 (foul)
+      const laneX = 50;
+      const laneYTop = 20;
+      const laneYBottom = 700;
+      const laneWpx = 160;
+      const laneHpx = laneYBottom - laneYTop;
+
+      // x: -halfLaneWidthM (left) to +halfLaneWidthM (right)
+      const tX = (xMeters + halfLaneWidthM) / laneWidthM;
+      const xPx = laneX + tX * laneWpx;
+
+      // y: 0 at foul line, laneLengthM at pins (we'll map 0 -> bottom, length -> top)
+      const tY = yMeters / laneLengthM; // 0 .. 1
+      const yPx = laneYBottom - tY * laneHpx;
+
+      return { x: xPx, y: yPx };
+    }
+
+    // Draw ruler marks in feet along the left side
+    function drawRuler() {
+      while (rulerGroup.firstChild && rulerGroup.firstChild.tagName !== 'rect') {
+        rulerGroup.removeChild(rulerGroup.lastChild);
+      }
+
+      for (let ft = 0; ft <= laneLengthFt; ft += 5) {
+        const yMeters = ft * FT_TO_M;
+        const { y } = worldToSvg(0, yMeters);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", 22);
+        line.setAttribute("x2", 38);
+        line.setAttribute("y1", y);
+        line.setAttribute("y2", y);
+        line.setAttribute("stroke", ft % 10 === 0 ? "#aaa" : "#555");
+        line.setAttribute("stroke-width", ft % 10 === 0 ? "1.4" : "0.8");
+        rulerGroup.appendChild(line);
+
+        if (ft % 10 === 0) {
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", 19);
+          text.setAttribute("y", y + 3);
+          text.setAttribute("fill", "#aaa");
+          text.setAttribute("font-size", "7");
+          text.setAttribute("text-anchor", "end");
+          text.textContent = ft;
+          rulerGroup.appendChild(text);
+        }
+      }
+    }
+
+    drawRuler();
+
+    // Update oil zone visual based on oil length
+    function updateOilZoneVisual(oilLengthFt) {
+      const oilLengthM = oilLengthFt * FT_TO_M;
+      const yOilEnd = oilLengthM;
+      const { y: yPxEnd } = worldToSvg(0, yOilEnd);
+      const { y: yPxStart } = worldToSvg(0, 0);
+
+      const height = yPxStart - yPxEnd;
+      oilZone.setAttribute("y", yPxEnd);
+      oilZone.setAttribute("height", height);
+    }
+
+    // Physics simulation: simplified sliding → rolling with friction zones
+    function simulate() {
+      const startBoard = parseFloat(startBoardEl.value || "28");
+      const launchAngleDeg = parseFloat(launchAngleEl.value || "1.8");
+      const ballSpeedMph = parseFloat(ballSpeedEl.value || "17.9");
+      const revRateRpm = parseFloat(revRateEl.value || "416");
+      const axisRotDeg = parseFloat(axisRotEl.value || "45");
+      const axisTiltDeg = parseFloat(axisTiltEl.value || "15");
+      const oilLengthFt = parseFloat(oilLengthEl.value || "35");
+      const muOil = parseFloat(muOilEl.value || "0.04");
+      const muDry = parseFloat(muDryEl.value || "0.18");
+
+      // Start board is from right gutter: board 1 is right edge, board 20 is center
+      const startBoardIndexFromCenter = 20 - startBoard;
+      const startX = startBoardIndexFromCenter * boardWidthM;
+      let x = startX;
+      let y = 0;
+
+      // Launch angle measured relative to lane axis (y); positive angle goes to the RIGHT
+      const launchAngleRad = launchAngleDeg * Math.PI / 180;
+      const speedMps = ballSpeedMph * MPH_TO_MPS;
+      let vx = speedMps * Math.sin(launchAngleRad);
+      let vy = speedMps * Math.cos(launchAngleRad);
+
+      // Convert rev rate to angular velocity. We'll split it into
+      // a "forward roll" component (about x-axis) and a "side roll" component (about z-axis).
+      const omegaTotal = (revRateRpm * 2 * Math.PI) / 60; // rad/s
+      const axisRotRad = axisRotDeg * Math.PI / 180;
+
+      // Very simple decomposition: axis rotation controls how much is side vs forward component.
+      let omegaRoll = omegaTotal * Math.cos(axisRotRad);    // about horizontal axis => forward roll
+      let omegaSide = -omegaTotal * Math.sin(axisRotRad);   // about vertical axis => hook; sign negative = right-hander hook LEFT
+
+      // Axis tilt could modulate aggressiveness; for now we just use it as a mild scale on side component.
+      const tiltScale = 0.5 + (axisTiltDeg / 60);           // ~0.5–1.0
+      omegaSide *= tiltScale;
+
+      const oilLengthM = oilLengthFt * FT_TO_M;
+
+      const dt = 0.004;       // 4 ms
+      const maxTime = 4.0;    // seconds
+      const maxSteps = Math.ceil(maxTime / dt);
+
+      const pointsSliding = [];
+      const pointsRolling = [];
+
+      let sliding = true;
+      let yAtRoll = null;
+
+      for (let step = 0; step < maxSteps; step++) {
+        const t = step * dt;
+
+        // Record current point
+        const point = { x, y };
+        if (sliding) {
+          pointsSliding.push(point);
+        } else {
+          pointsRolling.push(point);
+        }
+
+        // Exit if ball is beyond pins or off the lane
+        if (y >= laneLengthM || Math.abs(x) > halfLaneWidthM) {
+          break;
+        }
+
+        // Choose friction coefficient based on oil pattern
+        const mu = y < oilLengthM ? muOil : muDry;
+
+        // Relative surface speed at the contact patch (simplified)
+        const vRelX = vx - omegaSide * ballRadiusM;
+        const vRelY = vy - omegaRoll * ballRadiusM;
+        const vRelMag = Math.sqrt(vRelX * vRelX + vRelY * vRelY);
+
+        if (sliding) {
+          // Transition to rolling when contact point speed is small
+          if (vRelMag < 0.02) {
+            sliding = false;
+            yAtRoll = y;
+
+            // Snap to pure rolling: v ≈ ω × r
+            // For our simplified 2D model, we just enforce v components from ω components:
+            vx = omegaSide * ballRadiusM;
+            vy = omegaRoll * ballRadiusM;
+          } else {
+            // Kinetic friction opposing relative motion
+            const Fx = -mu * ballMassKg * g * (vRelX / (Math.abs(vRelX) + 1e-6));
+            const Fy = -mu * ballMassKg * g * (vRelY / (Math.abs(vRelY) + 1e-6));
+
+            const ax = Fx / ballMassKg;
+            const ay = Fy / ballMassKg;
+
+            vx += ax * dt;
+            vy += ay * dt;
+
+            // Torque from friction: τ ≈ r × F => magnitude r * F
+            // For simplicity, treat Fx as creating side-spin changes, Fy as changing forward-roll
+            const alphaSide = -(Fx * ballRadiusM) / ballI;
+            const alphaRoll = -(Fy * ballRadiusM) / ballI;
+
+            omegaSide += alphaSide * dt;
+            omegaRoll += alphaRoll * dt;
+          }
+        } else {
+          // Rolling phase: no more torque in this simplified model
+          // (In reality, static friction + energy loss would still slowly change things.)
+        }
+
+        // Integrate position
+        x += vx * dt;
+        y += vy * dt;
+      }
+
+      // Combine last point to read entry conditions
+      const allPoints = pointsSliding.concat(pointsRolling);
+      if (allPoints.length < 2) {
+        return { pointsSliding, pointsRolling, yAtRoll };
+      }
+
+      return { pointsSliding, pointsRolling, yAtRoll };
+    }
+
+    // Build SVG path strings and update summary
+    function updateSimulation() {
+      syncDisplay();
+
+      const { pointsSliding, pointsRolling, yAtRoll } = simulate();
+
+      // Build path strings
+      function buildPath(points) {
+        if (!points || points.length === 0) return "";
+        let d = "";
+        for (let i = 0; i < points.length; i++) {
+          const { x, y } = points[i];
+          const { x: sx, y: sy } = worldToSvg(x, y);
+          d += (i === 0 ? "M" : "L") + sx + " " + sy + " ";
+        }
+        return d.trim();
+      }
+
+      const dSliding = buildPath(pointsSliding);
+      const dRolling = buildPath(pointsRolling);
+
+      pathSliding.setAttribute("d", dSliding);
+      pathRolling.setAttribute("d", dRolling);
+
+      // Move ball marker to final point (if any)
+      const allPoints = pointsSliding.concat(pointsRolling);
+      if (allPoints.length > 0) {
+        const last = allPoints[allPoints.length - 1];
+        const { x: bx, y: by } = worldToSvg(last.x, last.y);
+        ballMarker.setAttribute("cx", bx);
+        ballMarker.setAttribute("cy", by);
+      } else {
+        ballMarker.setAttribute("cx", -100);
+        ballMarker.setAttribute("cy", -100);
+      }
+
+      // Compute summary stats at/near 60 ft
+      let entryPoint = null;
+      let prevPoint = null;
+      const targetY = laneLengthM;
+      for (let i = allPoints.length - 1; i >= 1; i--) {
+        const p = allPoints[i];
+        const pPrev = allPoints[i - 1];
+        if (p.y >= targetY && pPrev.y < targetY) {
+          // Linear interpolate to y=60ft
+          const t = (targetY - pPrev.y) / (p.y - pPrev.y);
+          const xInterp = pPrev.x + t * (p.x - pPrev.x);
+          entryPoint = { x: xInterp, y: targetY };
+          prevPoint = pPrev;
+          break;
+        }
+      }
+
+      if (!entryPoint && allPoints.length >= 2) {
+        entryPoint = allPoints[allPoints.length - 1];
+        prevPoint = allPoints[allPoints.length - 2];
+      }
+
+      if (!entryPoint || !prevPoint) {
+        entryBoardOut.textContent = "–";
+        entryAngleOut.textContent = "–";
+        slidingDistOut.textContent = "–";
+        rollingDistOut.textContent = "–";
+        pocketOut.textContent = "–";
+        gutterOut.textContent = "–";
+        return;
+      }
+
+      // Entry board from right gutter: board 1 at right edge
+      const xEntry = entryPoint.x;
+      const boardIndexFromCenter = xEntry / boardWidthM;
+      const boardFromRight = 20 - boardIndexFromCenter;
+
+      entryBoardOut.textContent = boardFromRight.toFixed(1) + " board";
+
+      // Entry angle: angle between the path and the y-axis
+      const dx = entryPoint.x - prevPoint.x;
+      const dy = entryPoint.y - prevPoint.y;
+      const angleRad = Math.atan2(dx, dy); // dx vs dy
+      const angleDeg = angleRad * 180 / Math.PI;
+      entryAngleOut.textContent = angleDeg.toFixed(1) + "°";
+
+      // Sliding vs rolling distances
+      const slideEndY = yAtRoll != null ? yAtRoll : (pointsSliding.length ? pointsSliding[pointsSliding.length - 1].y : 0);
+      const slidingFt = slideEndY / FT_TO_M;
+      const rollingFt = Math.max(0, (entryPoint.y - slideEndY) / FT_TO_M);
+
+      slidingDistOut.textContent = slidingFt.toFixed(1) + " ft";
+      rollingDistOut.textContent = rollingFt.toFixed(1) + " ft";
+
+      // Pocket window: 0.5–5.5 in off center for a right-hander
+      const offsetMeters = Math.abs(xEntry);
+      const offsetInches = offsetMeters / 0.0254;
+      const inPocket = offsetInches >= 0.5 && offsetInches <= 5.5;
+
+      pocketOut.textContent = (offsetInches).toFixed(2) + ' in ' + (inPocket ? "(pocket)" : "(outside)");
+      pocketOut.className = "summary-item-value " + (inPocket ? "ok" : "bad");
+
+      // Gutter / in play
+      const offLane = Math.abs(xEntry) > halfLaneWidthM;
+      gutterOut.textContent = offLane ? "Gutter / off lane" : "In play";
+      gutterOut.className = "summary-item-value " + (offLane ? "bad" : "ok");
+    }
+
+    function resetToJiShot() {
+      // Defaults inspired by Ji et al. / popular coverage:
+      // ~28th board from left on a short pattern, 1.8° to the right, ~17.9 mph, ~416 rpm.
+      // Here, boards are counted from the RIGHT, so this is mirrored but still a strong default.
+      startBoardEl.value = "28";
+      launchAngleEl.value = "1.8";
+      ballSpeedEl.value = "17.9";
+      revRateEl.value = "416";
+      axisRotEl.value = "45";
+      axisTiltEl.value = "15";
+      oilLengthEl.value = "35";
+      muOilEl.value = "0.04";
+      muDryEl.value = "0.18";
+      syncDisplay();
+      updateOilZoneVisual(parseFloat(oilLengthEl.value));
+      updateSimulation();
+    }
+
+    runBtn.addEventListener('click', () => {
+      updateOilZoneVisual(parseFloat(oilLengthEl.value));
+      updateSimulation();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      resetToJiShot();
+    });
+
+    // Initial render
+    resetToJiShot();
+  </script>
+</body>
+</html>
