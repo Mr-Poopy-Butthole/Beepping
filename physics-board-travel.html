@@ -13,6 +13,7 @@
       --text-muted: #a5a5c0;
       --danger: #ff6b6b;
       --success: #6bffb0;
+      --yellow: #ffd166;
     }
 
     * {
@@ -144,6 +145,7 @@
       display: flex;
       gap: 8px;
       margin-top: 8px;
+      flex-wrap: wrap;
     }
 
     button {
@@ -157,7 +159,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease, border-color 0.15s ease;
     }
 
     button.secondary {
@@ -189,11 +191,35 @@
       color: var(--text-muted);
     }
 
+    /* Bowler consistency buttons */
+
+    .consistency-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .consistency-btn {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(10,10,25,0.9);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .consistency-btn.active {
+      background: radial-gradient(circle at top, rgba(81,223,255,0.35), rgba(10,10,20,1));
+      color: var(--text-main);
+      border-color: rgba(81,223,255,0.9);
+    }
+
     /* Right side: lane + summary */
 
     .visuals-panel {
       display: grid;
-      grid-template-rows: minmax(260px, 320px) auto;
+      grid-template-rows: minmax(420px, 72vh) auto;
       gap: 10px;
     }
 
@@ -206,6 +232,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      height: 100%;
+      min-height: 420px;
     }
 
     .lane-header {
@@ -227,7 +255,7 @@
       width: 100%;
       height: 100%;
       transform-origin: 50% 50%;
-      transform: rotate(90deg); /* rotate lane so pins are on right, foul on left */
+      transform: rotate(90deg); /* pins on right, foul on left */
     }
 
     .summary {
@@ -255,6 +283,10 @@
       color: var(--success);
     }
 
+    .summary-item-value.warn {
+      color: var(--yellow);
+    }
+
     .summary-item-value.bad {
       color: var(--danger);
     }
@@ -275,8 +307,9 @@
 <body>
   <h1>Physics-Based Bowling Line Explorer</h1>
   <div class="subtitle">
-    Merges your board-travel lane view with a simplified version of Ji et al.’s rigid-body bowling model
-    (sliding → rolling) so you can see how different releases translate into entry angle and board.
+    A user-friendly introduction to Ji et al.’s rigid-body bowling model: explore how your
+    target board, release, and lane pattern change the path, entry angle, and “miss room”
+    (strike probability) of a shot.
   </div>
 
   <div class="container">
@@ -376,6 +409,14 @@
         </div>
       </div>
 
+      <!-- Bowler consistency / miss pattern -->
+      <div class="section-label">Bowler consistency (target miss at 15 ft)</div>
+      <div class="consistency-row">
+        <button type="button" class="consistency-btn active" data-profile="tight" data-miss="1">Tight (±1 board)</button>
+        <button type="button" class="consistency-btn" data-profile="league" data-miss="3">League bowler (±3 boards)</button>
+        <button type="button" class="consistency-btn" data-profile="wild" data-miss="10">Wild (±10 boards)</button>
+      </div>
+
       <div class="button-row">
         <button id="runBtn">Run simulation</button>
         <button id="resetBtn" class="secondary">Reset to Ji shot</button>
@@ -383,14 +424,14 @@
 
       <div class="chip-row">
         <span class="chip">60 ft lane, 39 boards</span>
-        <span class="chip">Phases: sliding → rolling</span>
-        <span class="chip">Right-handed pocket model</span>
+        <span class="chip">Sliding → rolling rigid body</span>
+        <span class="chip">Strike probability via Monte Carlo</span>
       </div>
 
       <div class="note">
-        * Launch angle is computed from the start board at the foul line and the target board at 15 ft.
-        * Simplified rigid-body model: respects sliding vs. rolling and friction zones but ignores CG offset,
-        lane topography, and oil breakdown.
+        Launch angle is computed from the start board at the foul line and the target board at 15 ft.
+        Bowler consistency chooses how much we let your target wander in Monte Carlo when estimating
+        strike probability and drawing the colored “miss cone.”
       </div>
     </div>
 
@@ -398,10 +439,9 @@
     <div class="panel visuals-panel">
       <div class="lane-wrapper">
         <div class="lane-header">
-          Downlane view (left = foul line, right = pins)
+          Downlane view (left = foul line, right = pins). Central line = ideal shot; colored cone = miss window.
         </div>
         <svg id="laneSvg" viewBox="0 0 260 720" preserveAspectRatio="xMidYMid meet">
-          <!-- Lane background & boards -->
           <defs>
             <linearGradient id="laneWood" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stop-color="#e1c7a5"></stop>
@@ -412,7 +452,7 @@
           <!-- Lane base -->
           <rect x="50" y="20" width="160" height="680" fill="url(#laneWood)" opacity="0.95" stroke="#b88b57" stroke-width="1" />
 
-          <!-- Boards (simple visual stripes, already vertical) -->
+          <!-- Boards -->
           <g id="boards">
             <script type="application/ecmascript"><![CDATA[
               (function() {
@@ -438,7 +478,7 @@
 
           <!-- Foul line -->
           <line x1="50" y1="700" x2="210" y2="700" stroke="#333" stroke-width="2" />
-          <!-- Approach dots at foul line -->
+          <!-- Approach dots -->
           <g stroke="#444" stroke-width="2">
             <circle cx="90" cy="705" r="1.6" fill="#333" />
             <circle cx="130" cy="705" r="1.6" fill="#333" />
@@ -458,18 +498,19 @@
                 fill="rgba(0,120,255,0.16)" stroke="rgba(0,120,255,0.35)"
                 stroke-width="1" />
 
-          <!-- Pin deck region (last ~3 ft) -->
+          <!-- Pin deck -->
           <rect x="50" y="20" width="160" height="36" fill="#f0e6d5" opacity="0.95" stroke="#ccb9a4" stroke-width="1.5" />
-
-          <!-- Headpin -->
           <circle cx="130" cy="34" r="4" fill="#ffffff" stroke="#cc0000" stroke-width="1.5" />
 
-          <!-- Ruler on the left (ft marks) -->
+          <!-- Ruler -->
           <g id="ruler">
             <rect x="20" y="20" width="20" height="680" fill="#06070c" stroke="#555" stroke-width="1" />
           </g>
 
-          <!-- Ball path segments -->
+          <!-- Miss cone group (Monte Carlo paths) -->
+          <g id="coneGroup"></g>
+
+          <!-- Central path segments -->
           <path id="pathSliding" d="" fill="none" stroke="#ffe45e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
           <path id="pathRolling" d="" fill="none" stroke="#61f7a8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
 
@@ -480,7 +521,7 @@
 
       <div>
         <div class="panel-header">
-          <h2>Ball motion summary</h2>
+          <h2>Ball motion & strike tolerance</h2>
           <span class="tag">Output · Pocket view</span>
         </div>
         <div class="summary">
@@ -509,15 +550,37 @@
             <div id="gutterOut" class="summary-item-value">–</div>
           </div>
         </div>
+
+        <div class="summary" style="margin-top:8px;">
+          <div>
+            <div class="summary-item-title">Strike prob. ±1 board (tight)</div>
+            <div id="probTightOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Strike prob. ±3 boards (league)</div>
+            <div id="probLeagueOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Strike prob. ±10 boards (wild)</div>
+            <div id="probWildOut" class="summary-item-value">–</div>
+          </div>
+          <div>
+            <div class="summary-item-title">Effective strike window*</div>
+            <div id="windowOut" class="summary-item-value">–</div>
+          </div>
+        </div>
+
         <div class="note">
-          Pocket is assumed 0.5–5.5 in from lane center at 60 ft (USBC strike-window data).
-          Entry angle between ~3–6° is usually ideal for strikes.
+          Strike probability is estimated by randomly varying your <b>target board at 15 ft</b> inside each miss
+          range and simulating many shots with the rigid-body model. Colors follow your bowling intuition:
+          green ≥ 90%, yellow 50–90%, red &lt; 45%. *Window is the widest miss range that still gives at least 50% strikes.
         </div>
       </div>
     </div>
   </div>
 
   <script>
+    // --- Constants ---
     const FT_TO_M = 0.3048;
     const MPH_TO_MPS = 0.44704;
 
@@ -539,6 +602,7 @@
     const ballMarker = document.getElementById('ballMarker');
     const oilZone = document.getElementById('oilZone');
     const rulerGroup = document.getElementById('ruler');
+    const coneGroup = document.getElementById('coneGroup');
 
     const entryBoardOut = document.getElementById('entryBoardOut');
     const entryAngleOut = document.getElementById('entryAngleOut');
@@ -546,6 +610,11 @@
     const rollingDistOut = document.getElementById('rollingDistOut');
     const pocketOut = document.getElementById('pocketOut');
     const gutterOut = document.getElementById('gutterOut');
+
+    const probTightOut = document.getElementById('probTightOut');
+    const probLeagueOut = document.getElementById('probLeagueOut');
+    const probWildOut = document.getElementById('probWildOut');
+    const windowOut = document.getElementById('windowOut');
 
     const startBoardEl = document.getElementById('startBoard');
     const targetBoard15El = document.getElementById('targetBoard15');
@@ -567,6 +636,15 @@
     const runBtn = document.getElementById('runBtn');
     const resetBtn = document.getElementById('resetBtn');
 
+    const consistencyButtons = document.querySelectorAll('.consistency-btn');
+    let activeProfile = 'tight'; // tight / league / wild
+    const profileMissRange = {
+      tight: 1,
+      league: 3,
+      wild: 10
+    };
+
+    // basic helpers
     function syncDisplay() {
       launchAngleVal.textContent = parseFloat(launchAngleEl.value).toFixed(1);
       ballSpeedVal.textContent = parseFloat(ballSpeedEl.value).toFixed(1);
@@ -576,14 +654,16 @@
       oilLengthVal.textContent = parseInt(oilLengthEl.value, 10);
     }
 
-    launchAngleEl.addEventListener('input', syncDisplay);
-    ballSpeedEl.addEventListener('input', syncDisplay);
-    revRateEl.addEventListener('input', syncDisplay);
-    axisRotEl.addEventListener('input', syncDisplay);
-    axisTiltEl.addEventListener('input', syncDisplay);
-    oilLengthEl.addEventListener('input', syncDisplay);
+    ['input','change'].forEach(ev => {
+      launchAngleEl.addEventListener(ev, syncDisplay);
+      ballSpeedEl.addEventListener(ev, syncDisplay);
+      revRateEl.addEventListener(ev, syncDisplay);
+      axisRotEl.addEventListener(ev, syncDisplay);
+      axisTiltEl.addEventListener(ev, syncDisplay);
+      oilLengthEl.addEventListener(ev, syncDisplay);
+    });
 
-    // world (m) -> SVG (px), original vertical lane (we rotate via CSS)
+    // world (m) -> svg (px) for original vertical lane (we rotate via CSS)
     function worldToSvg(xMeters, yMeters) {
       const laneX = 50;
       const laneYTop = 20;
@@ -629,7 +709,6 @@
         }
       }
     }
-
     drawRuler();
 
     function updateOilZoneVisual(oilLengthFt) {
@@ -637,55 +716,68 @@
       const yOilEnd = oilLengthM;
       const { y: yPxEnd } = worldToSvg(0, yOilEnd);
       const { y: yPxStart } = worldToSvg(0, 0);
-
       const height = yPxStart - yPxEnd;
       oilZone.setAttribute("y", yPxEnd);
       oilZone.setAttribute("height", height);
     }
 
-    // compute launch angle from boards
-    function computeLaunchAngleFromBoards() {
-      const startBoard = parseFloat(startBoardEl.value || "28");
-      const targetBoard = parseFloat(targetBoard15El.value || "10");
-
-      const startIndexFromCenter = 20 - startBoard;
-      const targetIndexFromCenter = 20 - targetBoard;
-
-      const startX = startIndexFromCenter * boardWidthM;
-      const targetX = targetIndexFromCenter * boardWidthM;
-
-      const dy = 15 * FT_TO_M; // 15 ft downlane
+    // Launch angle from boards
+    function computeLaunchAngle(startBoard, targetBoard) {
+      const startIdxFromCenter = 20 - startBoard;
+      const targetIdxFromCenter = 20 - targetBoard;
+      const startX = startIdxFromCenter * boardWidthM;
+      const targetX = targetIdxFromCenter * boardWidthM;
+      const dy = 15 * FT_TO_M;
       const dx = targetX - startX;
-
       let angleRad = Math.atan2(dx, dy);
       let angleDeg = angleRad * 180 / Math.PI;
-
       if (!isFinite(angleDeg)) angleDeg = 0;
-      angleDeg = Math.max(0, Math.min(15, angleDeg)); // clamp a bit
+      return angleDeg;
+    }
 
+    function computeLaunchAngleFromInputs() {
+      const startBoard = parseFloat(startBoardEl.value || '28');
+      const targetBoard = parseFloat(targetBoard15El.value || '10');
+      let angleDeg = computeLaunchAngle(startBoard, targetBoard);
+      angleDeg = Math.max(0, Math.min(15, angleDeg));
       launchAngleEl.value = angleDeg.toFixed(1);
       launchAngleVal.textContent = angleDeg.toFixed(1);
     }
 
     startBoardEl.addEventListener('input', () => {
-      computeLaunchAngleFromBoards();
+      computeLaunchAngleFromInputs();
       syncDisplay();
     });
     targetBoard15El.addEventListener('input', () => {
-      computeLaunchAngleFromBoards();
+      computeLaunchAngleFromInputs();
       syncDisplay();
     });
 
-    function simulate() {
-      const startBoard = parseFloat(startBoardEl.value || "28");
-      const launchAngleDeg = parseFloat(launchAngleEl.value || "1.8");
-      const ballSpeedMph = parseFloat(ballSpeedEl.value || "17.9");
-      const revRateRpm = parseFloat(revRateEl.value || "416");
-      const axisRotDeg = parseFloat(axisRotEl.value || "45");
-      const axisTiltDeg = parseFloat(axisTiltEl.value || "15");
-      const oilLengthFt = parseFloat(oilLengthEl.value || "35");
-      const muOil = parseFloat(muOilEl.value || "0.04");
-      const muDry = parseFloat(muDryEl.value || "0.18");
+    // strike classification
+    function classifyStrike(entryPoint, offLane) {
+      if (!entryPoint || offLane) return false;
+      const xEntry = entryPoint.x;
+      const offsetMeters = Math.abs(xEntry);
+      const offsetInches = offsetMeters / 0.0254;
+      const inPocketWindow = offsetInches >= 0.5 && offsetInches <= 5.5;
+      const angleDeg = entryPoint.entryAngleDeg;
+      const goodAngle = (angleDeg >= 3.0 && angleDeg <= 6.5);
+      return inPocketWindow && goodAngle;
+    }
+
+    // physics simulation for one shot
+    function simulateShot(params) {
+      const {
+        startBoard,
+        launchAngleDeg,
+        ballSpeedMph,
+        revRateRpm,
+        axisRotDeg,
+        axisTiltDeg,
+        oilLengthFt,
+        muOil,
+        muDry
+      } = params;
 
       const startBoardIndexFromCenter = 20 - startBoard;
       const startX = startBoardIndexFromCenter * boardWidthM;
@@ -714,24 +806,17 @@
 
       const pointsSliding = [];
       const pointsRolling = [];
-
       let sliding = true;
       let yAtRoll = null;
 
       for (let step = 0; step < maxSteps; step++) {
         const point = { x, y };
-        if (sliding) {
-          pointsSliding.push(point);
-        } else {
-          pointsRolling.push(point);
-        }
+        if (sliding) pointsSliding.push(point);
+        else pointsRolling.push(point);
 
-        if (y >= laneLengthM || Math.abs(x) > halfLaneWidthM) {
-          break;
-        }
+        if (y >= laneLengthM || Math.abs(x) > halfLaneWidthM) break;
 
         const mu = y < oilLengthM ? muOil : muDry;
-
         const vRelX = vx - omegaSide * ballRadiusM;
         const vRelY = vy - omegaRoll * ballRadiusM;
         const vRelMag = Math.sqrt(vRelX * vRelX + vRelY * vRelY);
@@ -740,22 +825,17 @@
           if (vRelMag < 0.02) {
             sliding = false;
             yAtRoll = y;
-
             vx = omegaSide * ballRadiusM;
             vy = omegaRoll * ballRadiusM;
           } else {
             const Fx = -mu * ballMassKg * g * (vRelX / (Math.abs(vRelX) + 1e-6));
             const Fy = -mu * ballMassKg * g * (vRelY / (Math.abs(vRelY) + 1e-6));
-
             const ax = Fx / ballMassKg;
             const ay = Fy / ballMassKg;
-
             vx += ax * dt;
             vy += ay * dt;
-
             const alphaSide = -(Fx * ballRadiusM) / ballI;
             const alphaRoll = -(Fy * ballRadiusM) / ballI;
-
             omegaSide += alphaSide * dt;
             omegaRoll += alphaRoll * dt;
           }
@@ -765,42 +845,15 @@
         y += vy * dt;
       }
 
-      return { pointsSliding, pointsRolling, yAtRoll };
-    }
-
-    function updateSimulation() {
-      // derive angle from boards first
-      computeLaunchAngleFromBoards();
-      syncDisplay();
-
-      const { pointsSliding, pointsRolling, yAtRoll } = simulate();
-
-      function buildPath(points) {
-        if (!points || points.length === 0) return "";
-        let d = "";
-        for (let i = 0; i < points.length; i++) {
-          const { x, y } = points[i];
-          const { x: sx, y: sy } = worldToSvg(x, y);
-          d += (i === 0 ? "M" : "L") + sx + " " + sy + " ";
-        }
-        return d.trim();
-      }
-
-      const dSliding = buildPath(pointsSliding);
-      const dRolling = buildPath(pointsRolling);
-
-      pathSliding.setAttribute("d", dSliding);
-      pathRolling.setAttribute("d", dRolling);
-
       const allPoints = pointsSliding.concat(pointsRolling);
-      if (allPoints.length > 0) {
-        const last = allPoints[allPoints.length - 1];
-        const { x: bx, y: by } = worldToSvg(last.x, last.y);
-        ballMarker.setAttribute("cx", bx);
-        ballMarker.setAttribute("cy", by);
-      } else {
-        ballMarker.setAttribute("cx", -100);
-        ballMarker.setAttribute("cy", -100);
+      if (allPoints.length < 2) {
+        return {
+          pointsSliding,
+          pointsRolling,
+          yAtRoll,
+          entryPoint: null,
+          offLane: true
+        };
       }
 
       let entryPoint = null;
@@ -812,70 +865,231 @@
         if (p.y >= targetY && pPrev.y < targetY) {
           const t = (targetY - pPrev.y) / (p.y - pPrev.y);
           const xInterp = pPrev.x + t * (p.x - pPrev.x);
-          entryPoint = { x: xInterp, y: targetY };
+          const dx = p.x - pPrev.x;
+          const dy = p.y - pPrev.y;
+          const angleRad = Math.atan2(dx, dy);
+          const angleDeg = angleRad * 180 / Math.PI;
+          entryPoint = { x: xInterp, y: targetY, entryAngleDeg: angleDeg };
           prevPoint = pPrev;
           break;
         }
       }
 
       if (!entryPoint && allPoints.length >= 2) {
-        entryPoint = allPoints[allPoints.length - 1];
-        prevPoint = allPoints[allPoints.length - 2];
+        const p = allPoints[allPoints.length - 1];
+        const pPrev = allPoints[allPoints.length - 2];
+        const dx = p.x - pPrev.x;
+        const dy = p.y - pPrev.y;
+        const angleRad = Math.atan2(dx, dy);
+        const angleDeg = angleRad * 180 / Math.PI;
+        entryPoint = { x: p.x, y: p.y, entryAngleDeg: angleDeg };
       }
 
-      if (!entryPoint || !prevPoint) {
-        entryBoardOut.textContent = "–";
-        entryAngleOut.textContent = "–";
-        slidingDistOut.textContent = "–";
-        rollingDistOut.textContent = "–";
-        pocketOut.textContent = "–";
-        gutterOut.textContent = "–";
-        return;
+      const offLane = Math.abs(allPoints[allPoints.length - 1].x) > halfLaneWidthM;
+
+      return {
+        pointsSliding,
+        pointsRolling,
+        yAtRoll,
+        entryPoint,
+        offLane
+      };
+    }
+
+    function buildPath(points) {
+      if (!points || points.length === 0) return "";
+      let d = "";
+      for (let i = 0; i < points.length; i++) {
+        const { x, y } = points[i];
+        const { x: sx, y: sy } = worldToSvg(x, y);
+        d += (i === 0 ? "M" : "L") + sx + " " + sy + " ";
+      }
+      return d.trim();
+    }
+
+    // Monte Carlo for a given miss range
+    function runMonteCarlo(missRangeBoards, baseParams, centralTargetBoard, sampleCount = 120) {
+      let strikeCount = 0;
+      const samplePaths = [];
+      for (let i = 0; i < sampleCount; i++) {
+        const delta = (Math.random() * 2 - 1) * missRangeBoards;
+        const targetBoard = centralTargetBoard + delta;
+        const startBoard = baseParams.startBoard;
+        const launchAngleDeg = computeLaunchAngle(startBoard, targetBoard);
+        const sim = simulateShot({ ...baseParams, launchAngleDeg });
+
+        const isStrike = classifyStrike(sim.entryPoint, sim.offLane);
+        if (isStrike) strikeCount++;
+
+        // keep some paths for visualization
+        if (i < 80) {
+          const allPoints = sim.pointsSliding.concat(sim.pointsRolling);
+          if (allPoints.length > 1) samplePaths.push(allPoints);
+        }
+      }
+      const probability = strikeCount / sampleCount;
+      return { probability, samplePaths };
+    }
+
+    function probToColor(prob) {
+      if (prob >= 0.9) return { css: 'ok', hex: '#00ff9c' };
+      if (prob >= 0.5) return { css: 'warn', hex: '#ffd166' };
+      return { css: 'bad', hex: '#ff4b5c' };
+    }
+
+    // main update
+    function updateSimulation() {
+      computeLaunchAngleFromInputs();
+      syncDisplay();
+
+      const startBoard = parseFloat(startBoardEl.value || '28');
+      const targetBoard = parseFloat(targetBoard15El.value || '10');
+      const launchAngleDeg = parseFloat(launchAngleEl.value || '1.8');
+      const ballSpeedMph = parseFloat(ballSpeedEl.value || '17.9');
+      const revRateRpm = parseFloat(revRateEl.value || '416');
+      const axisRotDeg = parseFloat(axisRotEl.value || '45');
+      const axisTiltDeg = parseFloat(axisTiltEl.value || '15');
+      const oilLengthFt = parseFloat(oilLengthEl.value || '35');
+      const muOil = parseFloat(muOilEl.value || '0.04');
+      const muDry = parseFloat(muDryEl.value || '0.18');
+
+      const baseParams = {
+        startBoard,
+        launchAngleDeg,
+        ballSpeedMph,
+        revRateRpm,
+        axisRotDeg,
+        axisTiltDeg,
+        oilLengthFt,
+        muOil,
+        muDry
+      };
+
+      // central shot
+      const centralSim = simulateShot(baseParams);
+      const dSliding = buildPath(centralSim.pointsSliding);
+      const dRolling = buildPath(centralSim.pointsRolling);
+      pathSliding.setAttribute('d', dSliding);
+      pathRolling.setAttribute('d', dRolling);
+
+      const allPointsCentral = centralSim.pointsSliding.concat(centralSim.pointsRolling);
+      if (allPointsCentral.length > 0) {
+        const last = allPointsCentral[allPointsCentral.length - 1];
+        const { x: bx, y: by } = worldToSvg(last.x, last.y);
+        ballMarker.setAttribute('cx', bx);
+        ballMarker.setAttribute('cy', by);
+      } else {
+        ballMarker.setAttribute('cx', -100);
+        ballMarker.setAttribute('cy', -100);
       }
 
-      const xEntry = entryPoint.x;
-      const boardIndexFromCenter = xEntry / boardWidthM;
-      const boardFromRight = 20 - boardIndexFromCenter;
+      // summary from central shot
+      if (centralSim.entryPoint) {
+        const xEntry = centralSim.entryPoint.x;
+        const boardIndexFromCenter = xEntry / boardWidthM;
+        const boardFromRight = 20 - boardIndexFromCenter;
+        entryBoardOut.textContent = boardFromRight.toFixed(1) + ' board';
+        entryAngleOut.textContent = centralSim.entryPoint.entryAngleDeg.toFixed(1) + '°';
 
-      entryBoardOut.textContent = boardFromRight.toFixed(1) + " board";
+        const slideEndY = centralSim.yAtRoll != null
+          ? centralSim.yAtRoll
+          : (centralSim.pointsSliding.length ? centralSim.pointsSliding[centralSim.pointsSliding.length - 1].y : 0);
+        const slidingFt = slideEndY / FT_TO_M;
+        const rollingFt = Math.max(0, (centralSim.entryPoint.y - slideEndY) / FT_TO_M);
+        slidingDistOut.textContent = slidingFt.toFixed(1) + ' ft';
+        rollingDistOut.textContent = rollingFt.toFixed(1) + ' ft';
 
-      const dx = entryPoint.x - prevPoint.x;
-      const dy = entryPoint.y - prevPoint.y;
-      const angleRad = Math.atan2(dx, dy);
-      const angleDeg = angleRad * 180 / Math.PI;
-      entryAngleOut.textContent = angleDeg.toFixed(1) + "°";
+        const offsetMeters = Math.abs(xEntry);
+        const offsetInches = offsetMeters / 0.0254;
+        const inPocketWindow = offsetInches >= 0.5 && offsetInches <= 5.5;
+        pocketOut.textContent = offsetInches.toFixed(2) + ' in ' + (inPocketWindow ? '(pocket)' : '(outside)');
+        pocketOut.className = 'summary-item-value ' + (inPocketWindow ? 'ok' : 'bad');
 
-      const slideEndY = yAtRoll != null ? yAtRoll : (pointsSliding.length ? pointsSliding[pointsSliding.length - 1].y : 0);
-      const slidingFt = slideEndY / FT_TO_M;
-      const rollingFt = Math.max(0, (entryPoint.y - slideEndY) / FT_TO_M);
+        const offLane = centralSim.offLane;
+        gutterOut.textContent = offLane ? 'Gutter / off lane' : 'In play';
+        gutterOut.className = 'summary-item-value ' + (offLane ? 'bad' : 'ok');
+      } else {
+        entryBoardOut.textContent = entryAngleOut.textContent =
+          slidingDistOut.textContent = rollingDistOut.textContent =
+          pocketOut.textContent = gutterOut.textContent = '–';
+      }
 
-      slidingDistOut.textContent = slidingFt.toFixed(1) + " ft";
-      rollingDistOut.textContent = rollingFt.toFixed(1) + " ft";
+      // MONTE CARLO for three ranges
+      const tight = runMonteCarlo(1, baseParams, targetBoard);
+      const league = runMonteCarlo(3, baseParams, targetBoard);
+      const wild = runMonteCarlo(10, baseParams, targetBoard);
 
-      const offsetMeters = Math.abs(xEntry);
-      const offsetInches = offsetMeters / 0.0254;
-      const inPocket = offsetInches >= 0.5 && offsetInches <= 5.5;
+      function updateProbDisplay(el, prob) {
+        if (Number.isFinite(prob)) {
+          const pct = (prob * 100).toFixed(0) + '%';
+          const colorInfo = probToColor(prob);
+          el.textContent = pct;
+          el.className = 'summary-item-value ' + colorInfo.css;
+        } else {
+          el.textContent = '–';
+          el.className = 'summary-item-value';
+        }
+      }
 
-      pocketOut.textContent = offsetInches.toFixed(2) + ' in ' + (inPocket ? "(pocket)" : "(outside)");
-      pocketOut.className = "summary-item-value " + (inPocket ? "ok" : "bad");
+      updateProbDisplay(probTightOut, tight.probability);
+      updateProbDisplay(probLeagueOut, league.probability);
+      updateProbDisplay(probWildOut, wild.probability);
 
-      const offLane = Math.abs(xEntry) > halfLaneWidthM;
-      gutterOut.textContent = offLane ? "Gutter / off lane" : "In play";
-      gutterOut.className = "summary-item-value " + (offLane ? "bad" : "ok");
+      // Effective window: widest band with prob >= 0.5
+      let windowStr = '–';
+      if (wild.probability >= 0.5) windowStr = '±10 boards (~wild)';
+      else if (league.probability >= 0.5) windowStr = '±3 boards (~league)';
+      else if (tight.probability >= 0.5) windowStr = '±1 board (~tight)';
+      else windowStr = 'Less than ±1 board (very tight)';
+      windowOut.textContent = windowStr;
+
+      // draw miss cone for active profile
+      let profileData = tight;
+      let missRange = 1;
+      if (activeProfile === 'league') {
+        profileData = league;
+        missRange = 3;
+      } else if (activeProfile === 'wild') {
+        profileData = wild;
+        missRange = 10;
+      }
+
+      while (coneGroup.firstChild) coneGroup.removeChild(coneGroup.firstChild);
+
+      const color = probToColor(profileData.probability).hex;
+      const strokeOpacity = 0.22;
+      const strokeWidth = 1.3;
+
+      profileData.samplePaths.forEach(points => {
+        const pathStr = buildPath(points);
+        if (!pathStr) return;
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('d', pathStr);
+        p.setAttribute('fill', 'none');
+        p.setAttribute('stroke', color);
+        p.setAttribute('stroke-width', strokeWidth);
+        p.setAttribute('stroke-linecap', 'round');
+        p.setAttribute('stroke-linejoin', 'round');
+        p.setAttribute('opacity', strokeOpacity);
+        coneGroup.appendChild(p);
+      });
     }
 
     function resetToJiShot() {
-      startBoardEl.value = "28";
-      targetBoard15El.value = "10";
-      ballSpeedEl.value = "17.9";
-      revRateEl.value = "416";
-      axisRotEl.value = "45";
-      axisTiltEl.value = "15";
-      oilLengthEl.value = "35";
-      muOilEl.value = "0.04";
-      muDryEl.value = "0.18";
-
-      computeLaunchAngleFromBoards();
+      startBoardEl.value = '28';
+      targetBoard15El.value = '10';
+      ballSpeedEl.value = '17.9';
+      revRateEl.value = '416';
+      axisRotEl.value = '45';
+      axisTiltEl.value = '15';
+      oilLengthEl.value = '35';
+      muOilEl.value = '0.04';
+      muDryEl.value = '0.18';
+      activeProfile = 'tight';
+      consistencyButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.profile === activeProfile);
+      });
+      computeLaunchAngleFromInputs();
       updateOilZoneVisual(parseFloat(oilLengthEl.value));
       syncDisplay();
       updateSimulation();
@@ -886,10 +1100,18 @@
       updateSimulation();
     });
 
-    resetBtn.addEventListener('click', () => {
-      resetToJiShot();
+    resetBtn.addEventListener('click', resetToJiShot);
+
+    consistencyButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        consistencyButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeProfile = btn.dataset.profile;
+        updateSimulation();
+      });
     });
 
+    // initial render
     resetToJiShot();
   </script>
 </body>
